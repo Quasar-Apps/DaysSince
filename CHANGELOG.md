@@ -11,7 +11,28 @@ this file is the fuller, developer-facing history.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+- **Hardened the cold-start path against a launch crash.**
+  `MainActivity.onCreate` re-arms the widget refresh via
+  `WidgetRefreshScheduler.hasPlacedWidgets`, which dereferenced
+  `AppWidgetManager.getInstance(context)` without a null check. That call returns
+  `null` on devices/profiles without `FEATURE_APP_WIDGETS` (some emulators, TV,
+  restricted profiles), so it could NPE at launch. It now treats a missing widget
+  host as "no widgets placed", and the whole scheduling step is wrapped in a
+  best-effort guard so no widget/WorkManager failure can crash the launch.
+
+### Testing
+- Added `MainActivityLaunchInstrumentedTest`, a cold-start smoke test that launches
+  the real `MainActivity` to RESUMED. Previously every UI test hosted `PulsarApp`
+  in a stub activity, so nothing exercised the launcher activity's `onCreate`
+  (splash install, edge-to-edge, widget scheduling) — the gap through which a
+  launch crash could reach the store.
+
+### Build
+- Added a defense-in-depth R8 keep-rule for the app's `ViewModel` subclass
+  constructors. `lifecycle-viewmodel`'s own consumer rule already keeps them, so
+  this is insurance against a future library version dropping that rule (cf. the
+  Hilt `@HiltViewModel` keep-rule regression), not a fix for a current crash.
 
 ## [1.0.0] - 2026-06-08
 

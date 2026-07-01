@@ -19,6 +19,20 @@
 # break the periodic widget refresh in release builds.
 -keep class com.quasarapps.pulsar.widget.WidgetRefreshWorker { <init>(...); }
 
+# Keep the constructors of our AndroidViewModel subclasses. Compose's viewModel() instantiates them
+# reflectively: SavedStateViewModelFactory finds no (Application, SavedStateHandle) constructor and
+# falls through to AndroidViewModelFactory, which calls
+# `modelClass.getConstructor(Application::class.java).newInstance(app)` — so the (Application)
+# constructor must survive R8. lifecycle-viewmodel already ships a consumer rule that keeps it
+# (`-keepclassmembers class * extends androidx.lifecycle.AndroidViewModel { <init>(android.app.Application); }`),
+# so under R8 full mode (the AGP 9 default) it is currently retained without this rule. This rule is
+# therefore defense-in-depth, not the fix for any known crash: it pins the constructors explicitly so a
+# future lifecycle version dropping/narrowing that consumer rule can't silently break reflective
+# ViewModel creation in release (cf. the Hilt @HiltViewModel keep-rule regression, dagger#4739).
+-keep class com.quasarapps.pulsar.** extends androidx.lifecycle.ViewModel {
+    <init>(...);
+}
+
 # Preserve source file names and line numbers in stack traces for easier debugging.
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
