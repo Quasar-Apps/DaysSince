@@ -19,6 +19,20 @@
 # break the periodic widget refresh in release builds.
 -keep class com.quasarapps.pulsar.widget.WidgetRefreshWorker { <init>(...); }
 
+# WorkManager (used for the periodic widget refresh) initializes at process startup via
+# androidx.startup's InitializationProvider, which builds its Room-backed WorkDatabase. Room creates
+# the generated WorkDatabase_Impl reflectively. room-runtime's own consumer rule keeps RoomDatabase
+# subclasses by name (`-keep class * extends androidx.room.RoomDatabase`) but NOT their constructors,
+# and under R8 full mode (the AGP 9 default) that leaves the generated implementation non-instantiable
+# — so the app crashed at launch, before any UI, with "Failed to create an instance of ...WorkDatabase"
+# from androidx.startup. This was the Google Play "opens, then keeps crashing" rejection of
+# versionCode 10000; it reproduces only in the minified release build, never in debug (which skips R8),
+# which is why the whole test suite stayed green. Pin the constructors of every RoomDatabase subclass
+# so the generated implementation stays instantiable under R8.
+-keep class * extends androidx.room.RoomDatabase {
+    <init>(...);
+}
+
 # Keep the constructors of our AndroidViewModel subclasses. Compose's viewModel() instantiates them
 # reflectively: SavedStateViewModelFactory finds no (Application, SavedStateHandle) constructor and
 # falls through to AndroidViewModelFactory, which calls
