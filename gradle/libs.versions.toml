@@ -22,7 +22,8 @@ composeBom = "2026.05.01"
 activityCompose = "1.9.3"
 # 4.14+ is required to support Android SDK 35 (project targetSdk); 4.12.x maxed out at SDK 34.
 robolectric = "4.14.1"
-# Versions aligned with Compose BOM 2024.10.
+# Compose-adjacent AndroidX libraries (navigation / lifecycle / datastore), versioned independently of
+# the Compose BOM above.
 navigationCompose = "2.8.3"
 lifecycleViewmodelCompose = "2.8.7"
 datastore = "1.1.1"
