@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Match the Gradle daemon JVM pinned in gradle/gradle-daemon-jvm.properties (JetBrains
       # Runtime 21). Providing JBR 21 here lets Gradle reuse this JDK for the build daemon instead
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Match the Gradle daemon JVM pinned in gradle/gradle-daemon-jvm.properties (JetBrains
       # Runtime 21). Providing JBR 21 here lets Gradle reuse this JDK for the build daemon instead
@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Match the Gradle daemon JVM pinned in gradle/gradle-daemon-jvm.properties (JetBrains
       # Runtime 21). Providing JBR 21 here lets Gradle reuse this JDK for the build daemon instead
@@ -128,7 +128,7 @@ jobs:
       # (`:app:<device>Setup`) failing with `MissingValueException` against the previously-cached
       # image. Busting the key forces a fresh image download under the current tooling.
       - name: Cache ATD system image
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ env.SDK_ROOT }}/system-images/android-30/aosp_atd
           key: gmd-system-image-aosp-atd-30-v2
