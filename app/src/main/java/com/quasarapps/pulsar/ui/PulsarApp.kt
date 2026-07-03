@@ -103,9 +103,11 @@ fun PulsarApp(deepLink: DeepLinkTarget? = null) {
             val snackbarHostState = remember { SnackbarHostState() }
             val pendingUndo by vm.pendingUndo.collectAsState()
             // Resolve the snackbar strings in composition via stringResource rather than
-            // context.getString(...) inside the effect: the latter trips Compose's
-            // LocalContextGetResourceValueCall lint check (and doesn't react to config changes). Keyed on
-            // pendingUndo, so the message re-resolves for each deletion.
+            // context.getString(...) inside the effect, which trips Compose's LocalContextGetResourceValueCall
+            // lint. Keyed on pendingUndo, so the message re-resolves for each deletion. (No locale
+            // reactivity is implied here: the LaunchedEffect won't restart for an already-shown snackbar on
+            // a config change — but this text is transient and read per-delete, so there's no stale-locale
+            // bug; the hoist is just the cleaner, lint-clean idiom.)
             val undoActionLabel = stringResource(R.string.action_undo)
             val undoMessage = pendingUndo?.let {
                 stringResource(R.string.detail_delete_snackbar, it.milestone.title)
