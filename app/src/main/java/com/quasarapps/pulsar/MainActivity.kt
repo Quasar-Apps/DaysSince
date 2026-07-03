@@ -32,8 +32,11 @@ class MainActivity : ComponentActivity() {
         // NavController restores the back stack itself, so re-delivering would snap back to the detail.
         if (savedInstanceState == null) deliverDeepLink(intent)
 
-        // Re-arm the periodic widget refresh if any widget is placed (no-op otherwise), in case it was lost.
-        WidgetRefreshScheduler.ensureScheduledIfWidgetsPlaced(this)
+        // Re-arm the periodic widget refresh if any widget is placed (no-op otherwise), in case it was
+        // lost. Best-effort: scheduling background work is not essential to opening the app, so a
+        // failure here (e.g. an unavailable widget host or WorkManager init hiccup on some devices)
+        // must never crash the launch. Mirrors the runCatching guard around refreshWidgets().
+        runCatching { WidgetRefreshScheduler.ensureScheduledIfWidgetsPlaced(this) }
 
         setContent {
             PulsarApp(deepLink = deepLink)
