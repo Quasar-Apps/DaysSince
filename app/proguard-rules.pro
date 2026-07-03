@@ -33,17 +33,21 @@
     <init>(...);
 }
 
-# Keep the constructors of our AndroidViewModel subclasses. Compose's viewModel() instantiates them
-# reflectively: SavedStateViewModelFactory finds no (Application, SavedStateHandle) constructor and
-# falls through to AndroidViewModelFactory, which calls
-# `modelClass.getConstructor(Application::class.java).newInstance(app)` — so the (Application)
-# constructor must survive R8. lifecycle-viewmodel already ships a consumer rule that keeps it
-# (`-keepclassmembers class * extends androidx.lifecycle.AndroidViewModel { <init>(android.app.Application); }`),
-# so under R8 full mode (the AGP 9 default) it is currently retained without this rule. This rule is
-# therefore defense-in-depth, not the fix for any known crash: it pins the constructors explicitly so a
-# future lifecycle version dropping/narrowing that consumer rule can't silently break reflective
-# ViewModel creation in release (cf. the Hilt @HiltViewModel keep-rule regression, dagger#4739).
--keep class com.quasarapps.pulsar.** extends androidx.lifecycle.ViewModel {
+# Keep the constructors of our ViewModel subclasses. Compose's viewModel() instantiates them
+# reflectively — for our AndroidViewModels, SavedStateViewModelFactory finds no
+# (Application, SavedStateHandle) constructor and falls through to AndroidViewModelFactory, which calls
+# `modelClass.getConstructor(Application::class.java).newInstance(app)`, so that (Application) ctor must
+# survive R8. lifecycle-viewmodel already ships a consumer rule that keeps it
+# (`-keepclassmembers,allowobfuscation class * extends androidx.lifecycle.AndroidViewModel { <init>(android.app.Application); }`),
+# so this is defense-in-depth, not the fix for any known crash — insurance against a future lifecycle
+# version dropping that rule (cf. the Hilt @HiltViewModel keep-rule regression, dagger#4739).
+#
+# -keepclassmembers (not -keep class): the classes are already reachable via their class literals at the
+# viewModel<…>() call sites, so R8 keeps the types regardless — only the reflectively-invoked ctor needs
+# pinning. allowobfuscation lets R8 still rename the class, which is safe because the factory resolves the
+# ctor through the Class object, not by name. (Contrast the Room rule above, which is -keep class
+# precisely because WorkDatabase_Impl is resolved reflectively BY NAME, so its name must survive.)
+-keepclassmembers,allowobfuscation class com.quasarapps.pulsar.** extends androidx.lifecycle.ViewModel {
     <init>(...);
 }
 
