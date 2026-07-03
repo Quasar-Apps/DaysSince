@@ -4,7 +4,10 @@ agp = "9.2.1"
 
 # Kotlin 2.x. The Compose compiler is now applied via the org.jetbrains.kotlin.plugin.compose
 # Gradle plugin (versioned with Kotlin), replacing the old kotlinCompilerExtensionVersion.
-kotlin = "2.4.0"
+# Held at 2.2.10 here: Kotlin 2.4.0 advances the Compose *compiler* two generations while the runtime
+# stays at Compose 1.7 (BOM 2024.10), an untested pairing — it belongs with the Compose BOM / compileSdk
+# platform upgrade, not this routine-bumps PR.
+kotlin = "2.2.10"
 coreKtx = "1.15.0"
 # Splash screen API (Android 12 system splash, backported to API 23+).
 coreSplashscreen = "1.2.0"
@@ -22,7 +25,8 @@ composeBom = "2024.10.01"
 activityCompose = "1.9.3"
 # 4.14+ is required to support Android SDK 35 (project targetSdk); 4.12.x maxed out at SDK 34.
 robolectric = "4.16.1"
-# Versions aligned with Compose BOM 2024.10.
+# Compose-adjacent AndroidX libraries (navigation / lifecycle / datastore), versioned independently of
+# the Compose BOM above.
 navigationCompose = "2.8.3"
 lifecycleViewmodelCompose = "2.10.0"
 datastore = "1.2.1"
