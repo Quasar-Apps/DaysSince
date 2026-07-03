@@ -24,7 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -100,14 +100,21 @@ fun PulsarApp(deepLink: DeepLinkTarget? = null) {
             // Undo-delete: surface the view model's most recent deletion as an app-level snackbar
             // (delete pops Detail→Home, so the host can't live on one screen). Undo restores the
             // milestone + its widget bindings; dismiss/timeout drops it.
-            val context = LocalContext.current
             val snackbarHostState = remember { SnackbarHostState() }
             val pendingUndo by vm.pendingUndo.collectAsState()
+            // Resolve the snackbar strings in composition via stringResource rather than
+            // context.getString(...) inside the effect: the latter trips Compose's
+            // LocalContextGetResourceValueCall lint check (and doesn't react to config changes). Keyed on
+            // pendingUndo, so the message re-resolves for each deletion.
+            val undoActionLabel = stringResource(R.string.action_undo)
+            val undoMessage = pendingUndo?.let {
+                stringResource(R.string.detail_delete_snackbar, it.milestone.title)
+            }
             LaunchedEffect(pendingUndo) {
-                val pending = pendingUndo ?: return@LaunchedEffect
+                val message = undoMessage ?: return@LaunchedEffect
                 val result = snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.detail_delete_snackbar, pending.milestone.title),
-                    actionLabel = context.getString(R.string.action_undo),
+                    message = message,
+                    actionLabel = undoActionLabel,
                     withDismissAction = true,
                     duration = SnackbarDuration.Short,
                 )
