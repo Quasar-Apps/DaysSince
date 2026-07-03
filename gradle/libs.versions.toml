@@ -1,11 +1,11 @@
 [versions]
-# AGP 9.2.1, paired with the Gradle 9.x wrapper (pinned to 9.4.1 in gradle/wrapper/gradle-wrapper.properties).
+# AGP 9.2.1, paired with the Gradle 9.x wrapper (pinned to 9.5.1 in gradle/wrapper/gradle-wrapper.properties).
 agp = "9.2.1"
 
 # Kotlin 2.x. The Compose compiler is now applied via the org.jetbrains.kotlin.plugin.compose
 # Gradle plugin (versioned with Kotlin), replacing the old kotlinCompilerExtensionVersion.
 kotlin = "2.4.0"
-coreKtx = "1.19.0"
+coreKtx = "1.15.0"
 # Splash screen API (Android 12 system splash, backported to API 23+).
 coreSplashscreen = "1.2.0"
 junit = "4.13.2"
@@ -19,11 +19,11 @@ appcompat = "1.7.1"
 material = "1.14.0"
 # Compose BOM: pins the Compose library versions. The Compose compiler itself tracks Kotlin (see [plugins]).
 composeBom = "2024.10.01"
-activityCompose = "1.13.0"
+activityCompose = "1.9.3"
 # 4.14+ is required to support Android SDK 35 (project targetSdk); 4.12.x maxed out at SDK 34.
 robolectric = "4.16.1"
 # Versions aligned with Compose BOM 2024.10.
-navigationCompose = "2.9.8"
+navigationCompose = "2.8.3"
 lifecycleViewmodelCompose = "2.10.0"
 datastore = "1.2.1"
 glance = "1.1.1"
