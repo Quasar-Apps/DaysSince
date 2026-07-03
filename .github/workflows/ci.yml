@@ -128,7 +128,7 @@ jobs:
       # (`:app:<device>Setup`) failing with `MissingValueException` against the previously-cached
       # image. Busting the key forces a fresh image download under the current tooling.
       - name: Cache ATD system image
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ env.SDK_ROOT }}/system-images/android-30/aosp_atd
           key: gmd-system-image-aosp-atd-30-v2
