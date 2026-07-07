@@ -1,5 +1,5 @@
 [versions]
-# AGP 9.2.1, paired with the Gradle 9.x wrapper (pinned to 9.5.1 in gradle/wrapper/gradle-wrapper.properties).
+# AGP 9.2.1, paired with the Gradle 9.x wrapper (pinned to 9.4.1 in gradle/wrapper/gradle-wrapper.properties).
 agp = "9.2.1"
 
 # Kotlin 2.x. The Compose compiler is now applied via the org.jetbrains.kotlin.plugin.compose
