@@ -11,7 +11,33 @@ this file is the fuller, developer-facing history.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+- **Crash on launch in the release build — the Google Play "Broken Functionality"
+  rejection (versionCode 10000).** WorkManager (used for the periodic widget
+  refresh) auto-initializes at process startup via `androidx.startup`, building its
+  Room-backed `WorkDatabase`. Under R8 full mode (the AGP 9 default), Room's
+  generated `WorkDatabase_Impl` was left non-instantiable — `room-runtime`'s
+  consumer keep-rule preserves the database class name but not its constructor — so
+  the app crashed before any UI with `Failed to create an instance of
+  …WorkDatabase`. It reproduced only in the minified release build, never in debug
+  (which skips R8), which is why every unit and instrumented test stayed green.
+  Fixed with an R8 keep-rule that pins the constructors of Room database
+  implementations.
+- Guarded a latent NPE on the same cold-start path: `WidgetRefreshScheduler`
+  dereferenced `AppWidgetManager.getInstance()`, which is `null` on devices/profiles
+  without `FEATURE_APP_WIDGETS`, and the whole widget-scheduling step in
+  `MainActivity.onCreate` is now best-effort so it can never crash the launch.
+
+### Testing
+- Added `MainActivityLaunchInstrumentedTest`, a cold-start smoke test that launches
+  the real `MainActivity` (previously every UI test hosted `PulsarApp` in a stub
+  activity, so the launcher activity's `onCreate` was never exercised).
+
+### Build
+- Added a defense-in-depth R8 keep-rule for the app's `ViewModel` subclass
+  constructors — insurance against a future `lifecycle-viewmodel` version dropping
+  the consumer rule that currently keeps them (cf. the Hilt `@HiltViewModel`
+  keep-rule regression).
 
 ## [1.0.0] - 2026-06-08
 

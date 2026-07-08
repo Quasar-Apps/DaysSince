@@ -103,7 +103,11 @@ object WidgetRefreshScheduler {
     }
 
     private fun hasPlacedWidgets(context: Context): Boolean {
-        val manager = AppWidgetManager.getInstance(context)
+        // AppWidgetManager.getInstance can return null on devices/profiles that don't declare
+        // FEATURE_APP_WIDGETS (some emulators, TV, restricted profiles). This is called synchronously
+        // from MainActivity.onCreate, so an unguarded null deref would crash the app at launch there;
+        // treat "no widget host" as "no widgets placed".
+        val manager = AppWidgetManager.getInstance(context) ?: return false
         return widgetProviders.any { provider ->
             manager.getAppWidgetIds(ComponentName(context, provider)).isNotEmpty()
         }
