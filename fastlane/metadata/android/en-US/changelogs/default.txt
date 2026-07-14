@@ -1,3 +1,3 @@
-Welcome to Pulsar 1.0 — the first release.
+Welcome to Pulsar — the first release.
 
 Count the days, hours and minutes since the moments that matter to you, with bold gradient cards and two home-screen widgets. Fully private: no account, no network, no permissions, no tracking. Available in 10 languages.
