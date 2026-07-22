@@ -81,9 +81,13 @@ Reduce recomposition churn and centralize wiring. Internal-only, no behavior cha
 | 23 | Consider type-safe Compose navigation | M | 🟡 |
 | 24 | Document/justify the two-DataStore split | S | 🟢 |
 | 28 | Unit-test the `WidgetUi` font-size / cap pure functions | S | 🟢 |
+| 34 | Migrate to `kotlinx-serialization` for milestone/binding JSON | M | 🟡 |
+| 35 | In-memory `StateFlow` caching in `MilestonesRepository` | S | 🟢 |
+| 36 | Review DST `ElapsedTime` logic vs. "Calendar Days" | S | 🟡 |
 
 **Acceptance:** no recomposition regressions; repositories created in one place; nav refactor (if done)
-keeps all instrumented nav tests green.
+keeps all instrumented nav tests green. Migration to `kotlinx-serialization` preserves all existing
+stored data (round-trip verified).
 
 ---
 
