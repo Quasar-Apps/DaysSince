@@ -12,8 +12,35 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
-      # Roll all minor/patch bumps into a single weekly PR to keep the noise down;
-      # major bumps still open individually so they get a deliberate review.
+      # The compileSdk-/Kotlin-coupled platform cohort. These libraries must move together: the
+      # AndroidX UI libraries' AAR metadata gates the project's compileSdk, the Compose compiler
+      # tracks Kotlin, Glance is Compose-for-widgets, and AGP caps the maximum compileSdk. Bumping
+      # one without the others produces the compileSdk-floor and binary-skew failures seen in #77 /
+      # #87. Isolating them into their own PR means a single library raising the compileSdk floor
+      # reddens only THIS PR (not the routine-bump PR below), and this PR becomes the standing
+      # "platform upgrade needed" signal — handled deliberately (cf. #89), not merged blind.
+      #
+      # NOTE: Dependabot assigns each dependency to the FIRST group whose patterns match, so this
+      # group MUST precede the catch-all `gradle-minor-patch` group below.
+      androidx-platform:
+        patterns:
+          - "com.android.*"                             # Android Gradle Plugin
+          - "com.google.android.material:*"
+          - "org.jetbrains.kotlin.*"                    # Kotlin + Compose-compiler Gradle plugins
+          - "org.jetbrains.kotlinx:kotlinx-coroutines*"
+          - "androidx.core:*"
+          - "androidx.activity:*"
+          - "androidx.navigation:*"
+          - "androidx.lifecycle:*"
+          - "androidx.compose*"                         # includes compose-bom
+          - "androidx.glance:*"
+          - "androidx.work:*"
+        update-types:
+          - minor
+          - patch
+      # Everything else (datastore, splashscreen, the androidx.test libs, robolectric, kover, …):
+      # roll minor/patch into a single low-noise weekly PR. Major bumps still open individually so
+      # they get a deliberate review.
       gradle-minor-patch:
         update-types:
           - minor
