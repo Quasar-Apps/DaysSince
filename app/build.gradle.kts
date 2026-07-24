@@ -61,7 +61,12 @@ if (hasPartialReleaseSigning) {
 
 android {
     namespace = "com.quasarapps.pulsar"
-    compileSdk = 35
+    // compileSdk 37 (Android 16 QPR toolchain) is the floor required by the current AndroidX cohort:
+    // core(-ktx) 1.19 and lifecycle 2.11 demand 37, activity 1.13 / navigation 2.9.8 demand 36. AGP 9.3
+    // (min Gradle 9.5, see the wrapper) supports up to compileSdk 37. targetSdk stays 35 here — compiling
+    // against newer APIs is decoupled from opting into their runtime behavior; the targetSdk 36 bump is a
+    // separate, device-tested change.
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.quasarapps.pulsar"

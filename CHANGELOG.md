@@ -11,6 +11,19 @@ this file is the fuller, developer-facing history.
 
 ## [Unreleased]
 
+### Changed
+- **Platform upgrade — `compileSdk` 35→37, Kotlin 2.2→2.4, AGP 9.2→9.3, and the AndroidX
+  UI cohort.** Moved the whole compileSdk-coupled cohort in one deliberate step: Kotlin
+  2.4.10 (Compose compiler +2 generations), Compose BOM 2026.06, AGP 9.3.0 (which raises
+  the Gradle wrapper floor to 9.6.1), and `core-ktx`/`activity`/`navigation`/`lifecycle`/
+  `work` to their current releases. Their AAR metadata requires `compileSdk` 36–37, so it
+  moves to 37 (AGP 9.3's maximum); `targetSdk` stays 35, decoupling the compile target from
+  opting into new runtime behavior. Bumping the cohort together avoids the partial-bump
+  binary skew (`NoSuchMethodError` in the instrumented tests) that failed the earlier
+  routine-bump attempts (#77, #87).
+
+## [1.0.1] - 2026-07-23
+
 ### Fixed
 - **Crash on launch in the release build — the Google Play "Broken Functionality"
   rejection (versionCode 10000).** WorkManager (used for the periodic widget

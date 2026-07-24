@@ -1,12 +1,14 @@
 [versions]
-# AGP 9.2.1, paired with the Gradle 9.x wrapper (pinned to 9.4.1 in gradle/wrapper/gradle-wrapper.properties).
+# AGP 9.3.0. Requires Gradle >= 9.5.0 (wrapper pinned to 9.6.1 in gradle/wrapper/gradle-wrapper.properties)
+# and supports up to compileSdk 37 (see app/build.gradle.kts).
 agp = "9.3.0"
 
 # Kotlin 2.x. The Compose compiler is now applied via the org.jetbrains.kotlin.plugin.compose
 # Gradle plugin (versioned with Kotlin), replacing the old kotlinCompilerExtensionVersion.
-# Held at 2.2.10: the 2.2.10-compiler + BOM 2026.05-runtime pairing is the one verified by CI (PR #78).
-# Moving to Kotlin 2.4 advances the Compose compiler two generations and belongs in the deliberate
-# platform-upgrade PR (with compileSdk 37 and the core/activity/navigation bumps), not a routine-bumps PR.
+# Kotlin 2.4.10, Compose BOM 2026.06 and compileSdk 37 are one aligned platform cohort — the Compose
+# compiler tracks Kotlin, and the AndroidX UI/lifecycle libs below require the newer compileSdk. Move
+# them together in a deliberate platform-upgrade PR (this one), never piecemeal: a partial bump is what
+# produced the lifecycle/coroutines binary-skew failures on the earlier routine-bump attempt (#77).
 kotlin = "2.4.10"
 coreKtx = "1.19.0"
 # Splash screen API (Android 12 system splash, backported to API 23+).
@@ -33,10 +35,10 @@ datastore = "1.2.1"
 glance = "1.1.1"
 # Deferred background work: periodic widget refresh.
 work = "2.11.2"
-# Held at 1.9.0: kotlinx-coroutines-test 1.11 calls coroutines-core 1.11-only methods
-# (BuildersKt.runBlockingK), but the instrumented test APK runs against the *app* APK's older core
-# (split-APK resolution ignores the test configuration), throwing NoSuchMethodError in the Glance
-# widget tests. Bump only together with whatever moves the app's own coroutines-core.
+# kotlinx-coroutines-test must stay in lockstep with the app's coroutines-core (pulled transitively via
+# Kotlin/AndroidX). A test artifact newer than the runtime core throws NoSuchMethodError (e.g.
+# BuildersKt.runBlockingK) in the split-APK instrumented tests — the split-APK resolver ignores the test
+# configuration. 1.11.0 matches the core that Kotlin 2.4 resolves; move both together.
 coroutines = "1.11.0"
 # Kotlin code-coverage. 0.9.2+ is required for Gradle 9 — 0.8.x fails clean builds under Gradle 9
 # (Kover doesn't create its tmp dir before writing kover-agent.args).
