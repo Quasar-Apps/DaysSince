@@ -217,6 +217,13 @@ dependencies {
     // Periodic background refresh for placed widgets.
     implementation(libs.androidx.work.runtime.ktx)
 
+    // Coroutines runtime, pinned explicitly so the app APK's coroutines-core matches the
+    // coroutines-test version used by the suites. In the split-APK instrumented tests, coroutines-test
+    // resolves its runtime against the *app* APK's core (not the androidTest configuration), so a core
+    // older than the test artifact throws NoSuchMethodError (BuildersKt.runBlockingK). Keep this in
+    // lockstep with kotlinx-coroutines-test — both use the `coroutines` version ref.
+    implementation(libs.kotlinx.coroutines.android)
+
     debugImplementation(platform(libs.androidx.compose.bom))
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
