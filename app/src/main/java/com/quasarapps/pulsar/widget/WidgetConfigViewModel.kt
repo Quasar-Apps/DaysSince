@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.quasarapps.pulsar.data.Milestone
 import com.quasarapps.pulsar.data.MilestonesRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -42,20 +43,33 @@ class WidgetConfigViewModel internal constructor(
      */
     val bound: StateFlow<Boolean> = _bound.asStateFlow()
 
-    // Non-null once a bind is in flight, so a double tap (or a re-tap after rotation) can't enqueue
-    // a second write.
+    // Non-null only while a bind is actually in flight, so a double tap (or a re-tap after rotation)
+    // can't enqueue a second write. Cleared in a finally below: a job left dangling after a failure
+    // would swallow every subsequent tap.
     private var bindJob: Job? = null
 
     fun bind(appWidgetId: Int, milestoneId: String, transparent: Boolean) {
-        if (bindJob != null) return
+        if (_bound.value || bindJob != null) return
         bindJob = viewModelScope.launch {
-            repo.bindWidget(appWidgetId, milestoneId, transparent)
-            // Best-effort, and deliberately after the write: the binding is already durable, and the
-            // widget re-renders on its next update regardless. A refresh failure (AppWidgetManager is
-            // absent on some devices/profiles — same guard as MainActivity.onCreate) must not stop the
-            // activity reporting success, or the user would be left staring at an unconfigured widget.
-            runCatching { MilestoneWidgets.refreshAll(getApplication()) }
-            _bound.value = true
+            try {
+                repo.bindWidget(appWidgetId, milestoneId, transparent)
+                // Best-effort, and deliberately after the write: the binding is already durable, and
+                // the widget re-renders on its next update regardless. A refresh failure
+                // (AppWidgetManager is absent on some devices/profiles — same guard as
+                // MainActivity.onCreate) must not stop the activity reporting success, or the user
+                // would be left staring at an unconfigured widget.
+                runCatching { MilestoneWidgets.refreshAll(getApplication()) }
+                _bound.value = true
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (write: Throwable) {
+                // The DataStore write failed (IO error, unreadable store). Leave `bound` false so the
+                // activity stays put with its RESULT_CANCELED, rather than claiming a binding that was
+                // never persisted — and let the exception stop here: an uncaught throw in
+                // viewModelScope would take the whole app down. Tapping again retries.
+            } finally {
+                bindJob = null
+            }
         }
     }
 }
