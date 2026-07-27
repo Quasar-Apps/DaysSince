@@ -67,17 +67,22 @@ class WidgetConfigViewModel internal constructor(
                     refreshWidgets(getApplication())
                 } catch (cancellation: CancellationException) {
                     throw cancellation
-                } catch (refresh: Throwable) {
-                    // Ignored on purpose — see above.
+                } catch (refresh: Exception) {
+                    // Ignored on purpose — see above. Exception, not Throwable: an Error (OOM,
+                    // LinkageError) is not something a best-effort widget redraw should absorb.
                 }
                 _bound.value = true
             } catch (cancellation: CancellationException) {
                 throw cancellation
-            } catch (write: Throwable) {
+            } catch (write: Exception) {
                 // The DataStore write failed (IO error, unreadable store). Leave `bound` false so the
                 // activity stays put with its RESULT_CANCELED, rather than claiming a binding that was
                 // never persisted — and let the exception stop here: an uncaught throw in
                 // viewModelScope would take the whole app down. Tapping again retries.
+                //
+                // Exception rather than Throwable so a genuinely fatal Error still propagates instead
+                // of being silently swallowed. CancellationException is an Exception too, hence the
+                // explicit rethrow above it.
             } finally {
                 bindJob = null
             }
