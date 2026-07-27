@@ -29,7 +29,11 @@ this file is the fuller, developer-facing history.
   same coroutine — leaving the widget permanently unbound. The write now runs in a
   retained `viewModelScope`, and its completion is exposed as state the recreated
   activity re-reads. The post-write widget refresh is also best-effort now, so an
-  `AppWidgetManager` hiccup can't strand a widget that was already bound.
+  `AppWidgetManager` hiccup can't strand a widget that was already bound. Conversely,
+  configuration now only reports success when the binding was genuinely persisted:
+  `bindWidget` returns whether it wrote, so a write the repository had to abandon
+  (unreadable bindings store, per the fix above) leaves the widget unplaced instead of
+  placing one that is permanently stuck on its setup prompt.
 
 ### Changed
 - **Platform upgrade — `compileSdk` 35→37, Kotlin 2.2→2.4, AGP 9.2→9.3, and the AndroidX

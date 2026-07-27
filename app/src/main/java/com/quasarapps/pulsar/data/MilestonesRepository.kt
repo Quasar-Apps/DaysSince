@@ -108,13 +108,29 @@ class MilestonesRepository internal constructor(
 
     // ---- widget bindings (appWidgetId -> WidgetBinding) ----
 
-    suspend fun bindWidget(appWidgetId: Int, milestoneId: String, transparent: Boolean = false) {
+    /**
+     * Binds [appWidgetId] to [milestoneId], returning whether the binding was actually persisted.
+     *
+     * Returns false when the stored bindings are unreadable and the write had to be abandoned to avoid
+     * destroying the other widgets' bindings (see [decodeBindingsOrNull]). Callers that report a result
+     * to someone else — notably the widget-configuration activity, whose RESULT_OK tells Android to
+     * finish placing the widget — must check this rather than assume "didn't throw" means "saved", or
+     * they'll place a widget that is permanently unbound.
+     */
+    suspend fun bindWidget(
+        appWidgetId: Int,
+        milestoneId: String,
+        transparent: Boolean = false,
+    ): Boolean {
+        var persisted = false
         dataStore.edit { prefs ->
             // Strict decode: binding one widget must not unbind every other placed widget.
             val bindings = (decodeBindingsOrNull(prefs[KEY_BINDINGS]) ?: return@edit).toMutableMap()
             bindings[appWidgetId] = WidgetBinding(milestoneId, transparent)
             prefs[KEY_BINDINGS] = encodeBindings(bindings)
+            persisted = true
         }
+        return persisted
     }
 
     suspend fun unbindWidget(appWidgetId: Int) {

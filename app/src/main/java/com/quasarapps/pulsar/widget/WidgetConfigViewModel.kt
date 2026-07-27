@@ -59,7 +59,14 @@ class WidgetConfigViewModel internal constructor(
         binding = true
         viewModelScope.launch {
             try {
-                repo.bindWidget(appWidgetId, milestoneId, transparent)
+                if (!repo.bindWidget(appWidgetId, milestoneId, transparent)) {
+                    // The repository refused the write rather than clobber an unreadable bindings
+                    // store, and refusing doesn't throw. Reporting success here would finish with
+                    // RESULT_OK and have Android place a widget that was never bound — permanently
+                    // stuck on its setup prompt. Staying unbound leaves RESULT_CANCELED, so no
+                    // broken widget is placed.
+                    return@launch
+                }
                 try {
                     // Best-effort, and deliberately after the write: the binding is already durable,
                     // and the widget re-renders on its next update regardless. A refresh failure

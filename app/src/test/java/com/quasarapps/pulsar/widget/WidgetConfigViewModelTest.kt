@@ -4,7 +4,9 @@ import android.app.Application
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.test.core.app.ApplicationProvider
 import com.quasarapps.pulsar.data.MilestonesRepository
 import kotlinx.coroutines.CoroutineScope
@@ -22,6 +24,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -145,6 +148,21 @@ class WidgetConfigViewModelTest {
 
         assertTrue("a retry after a failure must be able to succeed", flakyVm.bound.value)
         assertEquals("m1", flakyRepo.bindingForWidget(7)?.milestoneId)
+    }
+
+    @Test
+    fun bind_whenTheRepositoryRejectsTheWrite_staysUnbound() = runTest(dispatcher) {
+        // The other failure mode, and the sneakier one: an unreadable bindings value makes the
+        // repository abandon the write to avoid destroying the other widgets' bindings — and it does
+        // that by returning early, not by throwing. Treating "didn't throw" as success would finish
+        // with RESULT_OK and have Android place a widget that was never bound.
+        dataStore.edit { it[stringPreferencesKey("widget_bindings_json")] = "{{ truncated write" }
+
+        vm.bind(appWidgetId = 42, milestoneId = "m1", transparent = false)
+        advanceUntilIdle()
+
+        assertFalse("a write the repository rejected must not report success", vm.bound.value)
+        assertNull("nothing was persisted", repo.bindingForWidget(42))
     }
 
     /** A DataStore that throws on its first [failuresRemaining] writes, then behaves normally. */
