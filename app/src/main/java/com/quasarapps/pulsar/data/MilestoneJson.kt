@@ -7,7 +7,11 @@ import java.time.LocalTime
 
 /**
  * JSON (de)serialization for the milestone list, extracted from the repository so it can be unit-
- * tested without DataStore. Decoding is defensive: bad data yields an empty list / sensible defaults.
+ * tested without DataStore.
+ *
+ * Decoding comes in two flavours: [decode] is lenient (bad data yields an empty list / sensible
+ * defaults) and suits read paths; [decodeOrNull] distinguishes "empty" from "unreadable" and is the
+ * one write paths must use.
  */
 internal object MilestoneJson {
 
@@ -32,7 +36,24 @@ internal object MilestoneJson {
         return arr.toString()
     }
 
-    fun decode(json: String?): List<Milestone> {
+    /**
+     * Lenient decode for *read* paths: unparseable data reads as an empty list, so a corrupt store
+     * shows an empty UI rather than crashing.
+     *
+     * Never use this to build the baseline for a write — see [decodeOrNull].
+     */
+    fun decode(json: String?): List<Milestone> = decodeOrNull(json) ?: emptyList()
+
+    /**
+     * Strict decode for *write* paths: returns null when [json] holds a non-blank value that could not
+     * be parsed, instead of the empty list [decode] falls back to.
+     *
+     * The distinction matters because every write is a read-modify-write: a caller that can't tell
+     * "no milestones stored" from "milestones stored but unreadable" would rebuild the list from an
+     * empty baseline and persist it, permanently destroying every milestone the corrupt value held.
+     * Callers must abort the write on null.
+     */
+    fun decodeOrNull(json: String?): List<Milestone>? {
         if (json.isNullOrBlank()) return emptyList()
         return runCatching {
             val arr = JSONArray(json)
@@ -56,6 +77,6 @@ internal object MilestoneJson {
                     createdAt = o.optLong("createdAt", System.currentTimeMillis()),
                 )
             }
-        }.getOrDefault(emptyList())
+        }.getOrNull()
     }
 }

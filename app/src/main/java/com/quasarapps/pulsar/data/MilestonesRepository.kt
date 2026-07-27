@@ -59,7 +59,11 @@ class MilestonesRepository internal constructor(
 
     suspend fun upsert(milestone: Milestone) {
         dataStore.edit { prefs ->
-            val current = MilestoneJson.decode(prefs[KEY_MILESTONES]).toMutableList()
+            // Abort rather than rebuild from an empty baseline: if the stored value is present but
+            // unreadable, writing here would replace every milestone it holds with just this one.
+            // Leaving the corrupt value untouched keeps the data recoverable. See decodeOrNull.
+            val current = (MilestoneJson.decodeOrNull(prefs[KEY_MILESTONES]) ?: return@edit)
+                .toMutableList()
             val idx = current.indexOfFirst { it.id == milestone.id }
             if (idx >= 0) current[idx] = milestone else current.add(milestone)
             prefs[KEY_MILESTONES] = MilestoneJson.encode(current)
@@ -73,9 +77,11 @@ class MilestonesRepository internal constructor(
     suspend fun delete(id: String): RemovedMilestone? {
         var removed: RemovedMilestone? = null
         dataStore.edit { prefs ->
-            val current = MilestoneJson.decode(prefs[KEY_MILESTONES])
+            // Both decodes are strict (see decodeOrNull / decodeBindingsOrNull): a corrupt value here
+            // would otherwise make this write drop every milestone, or every binding, it holds.
+            val current = MilestoneJson.decodeOrNull(prefs[KEY_MILESTONES]) ?: return@edit
             val milestone = current.firstOrNull { it.id == id } ?: return@edit
-            val allBindings = decodeBindings(prefs[KEY_BINDINGS])
+            val allBindings = decodeBindingsOrNull(prefs[KEY_BINDINGS]) ?: return@edit
             removed = RemovedMilestone(milestone, allBindings.filterValues { it.milestoneId == id })
             prefs[KEY_MILESTONES] = MilestoneJson.encode(current.filterNot { it.id == id })
             prefs[KEY_BINDINGS] = encodeBindings(allBindings.filterValues { it.milestoneId != id })
@@ -89,10 +95,12 @@ class MilestonesRepository internal constructor(
      */
     suspend fun restore(removed: RemovedMilestone) {
         dataStore.edit { prefs ->
-            val current = MilestoneJson.decode(prefs[KEY_MILESTONES]).toMutableList()
+            // Strict decodes: an undo must never be the write that destroys the rest of the list.
+            val current = (MilestoneJson.decodeOrNull(prefs[KEY_MILESTONES]) ?: return@edit)
+                .toMutableList()
+            val bindings = (decodeBindingsOrNull(prefs[KEY_BINDINGS]) ?: return@edit).toMutableMap()
             if (current.none { it.id == removed.milestone.id }) current.add(removed.milestone)
             prefs[KEY_MILESTONES] = MilestoneJson.encode(current)
-            val bindings = decodeBindings(prefs[KEY_BINDINGS]).toMutableMap()
             bindings.putAll(removed.bindings)
             prefs[KEY_BINDINGS] = encodeBindings(bindings)
         }
@@ -102,7 +110,8 @@ class MilestonesRepository internal constructor(
 
     suspend fun bindWidget(appWidgetId: Int, milestoneId: String, transparent: Boolean = false) {
         dataStore.edit { prefs ->
-            val bindings = decodeBindings(prefs[KEY_BINDINGS]).toMutableMap()
+            // Strict decode: binding one widget must not unbind every other placed widget.
+            val bindings = (decodeBindingsOrNull(prefs[KEY_BINDINGS]) ?: return@edit).toMutableMap()
             bindings[appWidgetId] = WidgetBinding(milestoneId, transparent)
             prefs[KEY_BINDINGS] = encodeBindings(bindings)
         }
@@ -110,7 +119,7 @@ class MilestonesRepository internal constructor(
 
     suspend fun unbindWidget(appWidgetId: Int) {
         dataStore.edit { prefs ->
-            val bindings = decodeBindings(prefs[KEY_BINDINGS]).toMutableMap()
+            val bindings = (decodeBindingsOrNull(prefs[KEY_BINDINGS]) ?: return@edit).toMutableMap()
             bindings.remove(appWidgetId)
             prefs[KEY_BINDINGS] = encodeBindings(bindings)
         }
@@ -156,8 +165,19 @@ class MilestonesRepository internal constructor(
         /**
          * Decodes the bindings JSON, accepting both the current `{id, transparent}` shape and the
          * legacy plain-string id (upgraded to a [WidgetBinding] with transparent=false).
+         *
+         * Lenient (unreadable data reads as no bindings) — for read paths only. Writes must use
+         * [decodeBindingsOrNull], which distinguishes "none" from "unreadable".
          */
-        internal fun decodeBindings(json: String?): Map<Int, WidgetBinding> {
+        internal fun decodeBindings(json: String?): Map<Int, WidgetBinding> =
+            decodeBindingsOrNull(json) ?: emptyMap()
+
+        /**
+         * Strict counterpart to [decodeBindings] for write paths: null when [json] is non-blank but
+         * unparseable, so a read-modify-write can abort instead of replacing every stored binding
+         * with the single one it was adding. Same rationale as [MilestoneJson.decodeOrNull].
+         */
+        internal fun decodeBindingsOrNull(json: String?): Map<Int, WidgetBinding>? {
             if (json.isNullOrBlank()) return emptyMap()
             return runCatching {
                 val o = JSONObject(json)
@@ -180,7 +200,7 @@ class MilestonesRepository internal constructor(
                         if (binding != null) put(widgetId, binding)
                     }
                 }
-            }.getOrDefault(emptyMap())
+            }.getOrNull()
         }
     }
 }
