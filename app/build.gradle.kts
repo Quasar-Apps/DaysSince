@@ -61,7 +61,12 @@ if (hasPartialReleaseSigning) {
 
 android {
     namespace = "com.quasarapps.pulsar"
-    compileSdk = 35
+    // compileSdk 37 (Android 16 QPR toolchain) is the floor required by the current AndroidX cohort:
+    // core(-ktx) 1.19 and lifecycle 2.11 demand 37, activity 1.13 / navigation 2.9.8 demand 36. AGP 9.3
+    // (min Gradle 9.5, see the wrapper) supports up to compileSdk 37. targetSdk stays 35 here — compiling
+    // against newer APIs is decoupled from opting into their runtime behavior; the targetSdk 36 bump is a
+    // separate, device-tested change.
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.quasarapps.pulsar"
@@ -211,6 +216,13 @@ dependencies {
 
     // Periodic background refresh for placed widgets.
     implementation(libs.androidx.work.runtime.ktx)
+
+    // Coroutines runtime, pinned explicitly so the app APK's coroutines-core matches the
+    // coroutines-test version used by the suites. In the split-APK instrumented tests, coroutines-test
+    // resolves its runtime against the *app* APK's core (not the androidTest configuration), so a core
+    // older than the test artifact throws NoSuchMethodError (BuildersKt.runBlockingK). Keep this in
+    // lockstep with kotlinx-coroutines-test — both use the `coroutines` version ref.
+    implementation(libs.kotlinx.coroutines.android)
 
     debugImplementation(platform(libs.androidx.compose.bom))
     debugImplementation(libs.androidx.compose.ui.tooling)

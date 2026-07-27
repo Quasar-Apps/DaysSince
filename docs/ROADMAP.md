@@ -115,20 +115,26 @@ Keep the project healthy and current. Mostly infra; can run in parallel with Pha
 | 32 | Renovate/Dependabot + version-catalog update automation | S | 🟢 | ✅ done (Dependabot) |
 | 30 | Dependency bump pass (Compose BOM, navigation, etc.) | M | 🟡 | → via Dependabot PRs (#32) |
 | 29 | Resolve the `MonochromeLauncherIcon` TODO (needs vector icon source) | M | 🟡 | ⛔ blocked on the vector icon asset |
-| 33 | Plan the compileSdk/targetSdk 36 migration | M | 🟡 | ✅ plan below |
+| 33 | compileSdk/targetSdk migration | M | 🟡 | 🔄 `compileSdk`→37 + AndroidX cohort this PR; `targetSdk`→36 follow-up |
 | 44 | **Raise the Kover coverage floor incrementally** — the floor is set at 60% against a current JVM unit coverage of ~71%, leaving an 11-point gap where significant regressions go undetected before CI catches them. After each feature phase, bump the floor to within 5 points of the measured coverage, keeping it a meaningful safety net rather than a formality. | S | 🟢 | |
 
 **Acceptance:** CI enforces a coverage floor; a bot opens dependency-update PRs; build green on bumped versions; Kover floor stays within 5 points of measured coverage after each phase.
 
-### #33 — compileSdk / targetSdk 36 migration plan
+### #33 — compileSdk / targetSdk migration plan
 
-Currently `compileSdk = 35` / `targetSdk = 35` (Android 15). When Android 16 (SDK 36) tooling is stable, migrate as a dedicated PR:
+**Step 1 (this PR): `compileSdk = 37`, `targetSdk` stays 35.** The current AndroidX cohort forced
+the compile target past the originally-planned 36: `core(-ktx) 1.19` and `lifecycle 2.11` require
+`compileSdk 37`, `activity 1.13` / `navigation 2.9.8` require 36. AGP 9.3 (max `compileSdk 37`, min
+Gradle 9.5 → wrapper 9.6.1) plus Kotlin 2.4 and Compose BOM 2026.06 move as one aligned cohort, so the
+partial-bump binary skew (`NoSuchMethodError`) that failed #77/#87 doesn't recur. `compileSdk`-only means
+newer APIs compile without opting into new runtime behavior.
 
-1. **Tooling:** install the SDK 36 platform; confirm the AGP version in use supports `compileSdk = 36` (bump AGP first if needed — let Dependabot surface it).
-2. **Bump `compileSdk = 36`** first, keeping `targetSdk = 35`. Build + run lint: `compileSdk`-only changes surface new deprecations / lint checks without opting into behavior changes. Fix any new errors.
-3. **Bump `targetSdk = 36`** and review the Android 16 behavior changes that apply to this app: predictive-back, edge-to-edge enforcement (already edge-to-edge — verify insets), foreground-service / scheduling changes (we use WorkManager + an `updatePeriodMillis` alarm — verify the widget refresh still behaves), and any notification changes (none used today).
-4. **Test:** full unit + instrumented suite on an API 36 managed device (add a `pixel*api36` GMD alongside the API 30 one, or bump it) and a manual device pass on the widget + deep-link + edit flows.
-5. **Update** the `OldTargetApi` lint note in `app/lint.xml` and this roadmap once shipped.
+**Step 2 (follow-up PR): `targetSdk = 36`.** Opts into the Android 16 behavior changes that apply here:
+predictive-back, edge-to-edge enforcement (already edge-to-edge — verify insets), foreground-service /
+scheduling changes (we use WorkManager + an `updatePeriodMillis` alarm — verify the widget refresh still
+behaves), notifications (none used today). Test the full unit + instrumented suite on an API 36 managed
+device (add a `pixel*api36` GMD alongside the API 30 one) and a manual device pass on the widget /
+deep-link / edit flows. Update the `OldTargetApi` lint note in `app/lint.xml` and this roadmap once shipped.
 
 ---
 
