@@ -23,7 +23,7 @@
         <ignore path="src/main/res/xml/days_hours_minutes_since_widget_info.xml" />
     </issue>
 
-    <!-- targetSdk = 35 is the current latest Android (15) at the time of this
+    <!-- targetSdk = 36 is the current latest Android (16) at the time of this
          release. Lint is informational here, not a real version-skew finding. -->
     <issue id="OldTargetApi" severity="informational" />
 

@@ -6,7 +6,7 @@ whatever. Each milestone gets a bold gradient card in the app and an optional
 home-screen widget.
 
 - Minimum Android version: **8.0 (API 26)**
-- Targets Android: **15 (API 35)**
+- Targets Android: **16 (API 36)**
 - Offline-first. No accounts, no permissions, no tracking — your milestones never leave your device.
 
 ---

@@ -63,15 +63,19 @@ android {
     namespace = "com.quasarapps.pulsar"
     // compileSdk 37 (Android 16 QPR toolchain) is the floor required by the current AndroidX cohort:
     // core(-ktx) 1.19 and lifecycle 2.11 demand 37, activity 1.13 / navigation 2.9.8 demand 36. AGP 9.3
-    // (min Gradle 9.5, see the wrapper) supports up to compileSdk 37. targetSdk stays 35 here — compiling
-    // against newer APIs is decoupled from opting into their runtime behavior; the targetSdk 36 bump is a
-    // separate, device-tested change.
+    // (min Gradle 9.5, see the wrapper) supports up to compileSdk 37.
     compileSdk = 37
 
     defaultConfig {
         applicationId = "com.quasarapps.pulsar"
         minSdk = 26
-        targetSdk = 35
+        // targetSdk 36 opts into the Android 16 behavior changes (Play requires >= 36 from Aug 2026).
+        // The ones that touch this app: predictive back on by default (no onBackPressed/KEYCODE_BACK
+        // anywhere — back runs through Navigation Compose, which supports it), edge-to-edge opt-out
+        // removed (already edge-to-edge via enableEdgeToEdge + safeDrawing insets), and orientation/
+        // aspect-ratio restrictions ignored on sw>=600dp (none declared). Robolectric note: the JVM
+        // suite runs at this SDK level by default, so bumping targetSdk moves it to the SDK 36 jar.
+        targetSdk = 36
         versionCode = appVersionCode
         versionName = appVersionName
 
