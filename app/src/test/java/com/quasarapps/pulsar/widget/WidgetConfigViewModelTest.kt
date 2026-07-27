@@ -67,7 +67,9 @@ class WidgetConfigViewModelTest {
         val file = File.createTempFile("pulsar_test_", ".preferences_pb").also { it.delete() }
         dataStore = PreferenceDataStoreFactory.create(scope = dataStoreScope) { file }
         repo = MilestonesRepository(dataStore)
-        vm = WidgetConfigViewModel(app, repo)
+        // No-op refresh: Glance's updateAll never completes under Robolectric, and this test is about
+        // the binding write, not widget rendering.
+        vm = WidgetConfigViewModel(app, repo, refreshWidgets = {})
     }
 
     @After
@@ -77,7 +79,7 @@ class WidgetConfigViewModelTest {
     }
 
     @Test
-    fun bind_persistsTheBinding() = runTest(scheduler) {
+    fun bind_persistsTheBinding() = runTest(dispatcher) {
         vm.bind(appWidgetId = 42, milestoneId = "m1", transparent = true)
         advanceUntilIdle()
 
@@ -87,7 +89,7 @@ class WidgetConfigViewModelTest {
     }
 
     @Test
-    fun bind_exposesCompletionAsRetainedState() = runTest(scheduler) {
+    fun bind_exposesCompletionAsRetainedState() = runTest(dispatcher) {
         assertFalse("nothing bound yet", vm.bound.value)
 
         vm.bind(appWidgetId = 42, milestoneId = "m1", transparent = false)
@@ -100,7 +102,7 @@ class WidgetConfigViewModelTest {
     }
 
     @Test
-    fun bind_isIgnoredOnceOneHasBeenAccepted() = runTest(scheduler) {
+    fun bind_isIgnoredOnceOneHasBeenAccepted() = runTest(dispatcher) {
         vm.bind(appWidgetId = 42, milestoneId = "first", transparent = false)
         // A double tap (or a re-tap after a recreation) must not overwrite the first choice —
         // whether the second lands while the first is still in flight or after it has completed.
@@ -113,7 +115,7 @@ class WidgetConfigViewModelTest {
     }
 
     @Test
-    fun bind_leavesOtherWidgetsBindingsAlone() = runTest(scheduler) {
+    fun bind_leavesOtherWidgetsBindingsAlone() = runTest(dispatcher) {
         repo.bindWidget(appWidgetId = 1, milestoneId = "other", transparent = false)
 
         vm.bind(appWidgetId = 2, milestoneId = "mine", transparent = false)
@@ -124,10 +126,10 @@ class WidgetConfigViewModelTest {
     }
 
     @Test
-    fun bind_whenTheWriteFails_staysUnboundAndCanBeRetried() = runTest(scheduler) {
+    fun bind_whenTheWriteFails_staysUnboundAndCanBeRetried() = runTest(dispatcher) {
         val flaky = FlakyDataStore(failuresRemaining = 1)
         val flakyRepo = MilestonesRepository(flaky)
-        val flakyVm = WidgetConfigViewModel(app, flakyRepo)
+        val flakyVm = WidgetConfigViewModel(app, flakyRepo, refreshWidgets = {})
 
         flakyVm.bind(appWidgetId = 7, milestoneId = "m1", transparent = false)
         advanceUntilIdle()

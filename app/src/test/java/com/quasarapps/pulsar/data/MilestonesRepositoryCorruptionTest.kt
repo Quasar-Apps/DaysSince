@@ -82,7 +82,7 @@ class MilestonesRepositoryCorruptionTest {
     // ---- milestones ----
 
     @Test
-    fun upsert_withCorruptMilestones_leavesStoredValueUntouched() = runTest(scheduler) {
+    fun upsert_withCorruptMilestones_leavesStoredValueUntouched() = runTest(dispatcher) {
         seed(keyMilestones, corruptJson)
 
         repo.upsert(milestone("new"))
@@ -92,7 +92,7 @@ class MilestonesRepositoryCorruptionTest {
     }
 
     @Test
-    fun restore_withCorruptMilestones_leavesStoredValueUntouched() = runTest(scheduler) {
+    fun restore_withCorruptMilestones_leavesStoredValueUntouched() = runTest(dispatcher) {
         seed(keyMilestones, corruptJson)
 
         repo.restore(RemovedMilestone(milestone("undone"), emptyMap()))
@@ -101,7 +101,7 @@ class MilestonesRepositoryCorruptionTest {
     }
 
     @Test
-    fun delete_withCorruptMilestones_writesNothingAndReportsNothingRemoved() = runTest(scheduler) {
+    fun delete_withCorruptMilestones_writesNothingAndReportsNothingRemoved() = runTest(dispatcher) {
         seed(keyMilestones, corruptJson)
 
         val removed = repo.delete("anything")
@@ -113,7 +113,7 @@ class MilestonesRepositoryCorruptionTest {
     // ---- widget bindings (same read-modify-write hazard) ----
 
     @Test
-    fun bindWidget_withCorruptBindings_leavesStoredValueUntouched() = runTest(scheduler) {
+    fun bindWidget_withCorruptBindings_leavesStoredValueUntouched() = runTest(dispatcher) {
         seed(keyBindings, corruptJson)
 
         repo.bindWidget(appWidgetId = 7, milestoneId = "m1", transparent = true)
@@ -123,7 +123,7 @@ class MilestonesRepositoryCorruptionTest {
     }
 
     @Test
-    fun unbindWidget_withCorruptBindings_leavesStoredValueUntouched() = runTest(scheduler) {
+    fun unbindWidget_withCorruptBindings_leavesStoredValueUntouched() = runTest(dispatcher) {
         seed(keyBindings, corruptJson)
 
         repo.unbindWidget(appWidgetId = 7)
@@ -132,7 +132,7 @@ class MilestonesRepositoryCorruptionTest {
     }
 
     @Test
-    fun delete_withCorruptBindings_keepsBothValuesUntouched() = runTest(scheduler) {
+    fun delete_withCorruptBindings_keepsBothValuesUntouched() = runTest(dispatcher) {
         repo.upsert(milestone("a"))
         val goodMilestones = stored(keyMilestones)
         seed(keyBindings, corruptJson)
@@ -149,7 +149,7 @@ class MilestonesRepositoryCorruptionTest {
     // ---- the guard must not fire on legitimately-empty stores ----
 
     @Test
-    fun writesStillWorkOnAnEmptyStore() = runTest(scheduler) {
+    fun writesStillWorkOnAnEmptyStore() = runTest(dispatcher) {
         repo.upsert(milestone("a"))
         repo.upsert(milestone("b"))
         repo.bindWidget(appWidgetId = 1, milestoneId = "a")
@@ -159,7 +159,7 @@ class MilestonesRepositoryCorruptionTest {
     }
 
     @Test
-    fun writesStillWorkOnABlankStoredValue() = runTest(scheduler) {
+    fun writesStillWorkOnABlankStoredValue() = runTest(dispatcher) {
         // Blank is "nothing stored", not "unreadable" — it must not trip the abort.
         seed(keyMilestones, "")
 

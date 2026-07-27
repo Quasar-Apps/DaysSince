@@ -1,6 +1,7 @@
 package com.quasarapps.pulsar.widget
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.quasarapps.pulsar.data.Milestone
@@ -27,6 +28,10 @@ import kotlinx.coroutines.launch
 class WidgetConfigViewModel internal constructor(
     app: Application,
     private val repo: MilestonesRepository,
+    // Test seam. Glance's updateAll drives a real AppWidgetManager, which Robolectric never brings to
+    // completion, so a unit test substitutes a no-op rather than hanging on it. Production always gets
+    // the real refresh, and still awaits it before reporting success (see bind).
+    private val refreshWidgets: suspend (Context) -> Unit = { MilestoneWidgets.refreshAll(it) },
 ) : AndroidViewModel(app) {
 
     constructor(app: Application) : this(app, MilestonesRepository(app))
@@ -53,12 +58,18 @@ class WidgetConfigViewModel internal constructor(
         bindJob = viewModelScope.launch {
             try {
                 repo.bindWidget(appWidgetId, milestoneId, transparent)
-                // Best-effort, and deliberately after the write: the binding is already durable, and
-                // the widget re-renders on its next update regardless. A refresh failure
-                // (AppWidgetManager is absent on some devices/profiles — same guard as
-                // MainActivity.onCreate) must not stop the activity reporting success, or the user
-                // would be left staring at an unconfigured widget.
-                runCatching { MilestoneWidgets.refreshAll(getApplication()) }
+                try {
+                    // Best-effort, and deliberately after the write: the binding is already durable,
+                    // and the widget re-renders on its next update regardless. A refresh failure
+                    // (AppWidgetManager is absent on some devices/profiles — same guard as
+                    // MainActivity.onCreate) must not stop the activity reporting success, or the user
+                    // would be left staring at an unconfigured widget.
+                    refreshWidgets(getApplication())
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (refresh: Throwable) {
+                    // Ignored on purpose — see above.
+                }
                 _bound.value = true
             } catch (cancellation: CancellationException) {
                 throw cancellation
