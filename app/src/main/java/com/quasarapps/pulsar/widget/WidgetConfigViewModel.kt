@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.quasarapps.pulsar.data.Milestone
 import com.quasarapps.pulsar.data.MilestonesRepository
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -48,14 +47,17 @@ class WidgetConfigViewModel internal constructor(
      */
     val bound: StateFlow<Boolean> = _bound.asStateFlow()
 
-    // Non-null only while a bind is actually in flight, so a double tap (or a re-tap after rotation)
-    // can't enqueue a second write. Cleared in a finally below: a job left dangling after a failure
-    // would swallow every subsequent tap.
-    private var bindJob: Job? = null
+    // True only while a bind is in flight, so a double tap (or a re-tap after rotation) can't enqueue
+    // a second write. Deliberately a flag set *before* launching rather than the Job that launch
+    // returns: viewModelScope dispatches on Main.immediate, so when the body completes without
+    // suspending (a write that throws straight away) the finally clears the field before launch even
+    // returns — and the assignment would then put the finished Job back, wedging every later tap.
+    private var binding = false
 
     fun bind(appWidgetId: Int, milestoneId: String, transparent: Boolean) {
-        if (_bound.value || bindJob != null) return
-        bindJob = viewModelScope.launch {
+        if (_bound.value || binding) return
+        binding = true
+        viewModelScope.launch {
             try {
                 repo.bindWidget(appWidgetId, milestoneId, transparent)
                 try {
@@ -84,7 +86,7 @@ class WidgetConfigViewModel internal constructor(
                 // of being silently swallowed. CancellationException is an Exception too, hence the
                 // explicit rethrow above it.
             } finally {
-                bindJob = null
+                binding = false
             }
         }
     }
