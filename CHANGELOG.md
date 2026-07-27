@@ -11,6 +11,30 @@ this file is the fuller, developer-facing history.
 
 ## [Unreleased]
 
+### Fixed
+- **A corrupt store could silently destroy every milestone on the next write.** Every
+  write is a read-modify-write, and the decode used to flatten "nothing stored" and
+  "stored but unreadable" to the same empty list. So a single unreadable
+  `milestones_json` value made the next `upsert`/`restore` rebuild the list from an
+  empty baseline and persist it — permanently deleting every milestone the corrupt
+  value held. Write paths now use a strict decode that returns null on unreadable
+  data and abort the write, leaving the bytes on disk intact and recoverable. The
+  identical hazard in the widget-bindings store is fixed the same way (binding one
+  widget could unbind every other placed widget). Read paths stay lenient, so a
+  corrupt store still shows an empty UI rather than crashing.
+- **Configuring a widget no longer fails if the device is rotated mid-tap.** The
+  binding write ran in the config activity's `rememberCoroutineScope()`, which is
+  cancelled when the composition leaves; a rotation between the tap and the DataStore
+  write cancelled the write — and the `RESULT_OK`/`finish()` that followed it in the
+  same coroutine — leaving the widget permanently unbound. The write now runs in a
+  retained `viewModelScope`, and its completion is exposed as state the recreated
+  activity re-reads. The post-write widget refresh is also best-effort now, so an
+  `AppWidgetManager` hiccup can't strand a widget that was already bound. Conversely,
+  configuration now only reports success when the binding was genuinely persisted:
+  `bindWidget` returns whether it wrote, so a write the repository had to abandon
+  (unreadable bindings store, per the fix above) leaves the widget unplaced instead of
+  placing one that is permanently stuck on its setup prompt.
+
 ### Changed
 - **Platform upgrade — `compileSdk` 35→37, Kotlin 2.2→2.4, AGP 9.2→9.3, and the AndroidX
   UI cohort.** Moved the whole compileSdk-coupled cohort in one deliberate step: Kotlin
@@ -102,5 +126,6 @@ First public release.
 - DST-correct elapsed-time math (`ElapsedTime`), unit-tested across UTC, non-UTC
   zones, and both DST transition directions.
 
-[Unreleased]: https://github.com/QuasarApps/Pulsar/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/QuasarApps/Pulsar/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/QuasarApps/Pulsar/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/QuasarApps/Pulsar/releases/tag/v1.0.0
