@@ -45,7 +45,8 @@ this file is the fuller, developer-facing history.
   `safeDrawing` insets); orientation/resizability/aspect-ratio restrictions are ignored on
   sw≥600dp displays (none declared). The transparent system-bar overrides in the XML theme
   were dropped as dead config: `enableEdgeToEdge()` overrides them at runtime on every API
-  level, and Android 15+ ignores the window attributes entirely. Robolectric's default test
+  level, and under the edge-to-edge enforcement that comes with targeting Android 15+ the
+  window attributes are deprecated and generally have no effect. Robolectric's default test
   SDK follows `targetSdk`, so the JVM suite now runs on the SDK 36 android-all jar, and CI
   runs the instrumented suite on an API 36 managed device alongside the API 30 one.
 - **Platform upgrade — `compileSdk` 35→37, Kotlin 2.2→2.4, AGP 9.2→9.3, and the AndroidX

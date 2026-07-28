@@ -1,8 +1,9 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Material 3, no action bar (Compose draws everything). System-bar styling is not set here:
          both activities call enableEdgeToEdge() before the first frame, which overrides any XML
-         statusBarColor/navigationBarColor on every API level — and at targetSdk 36 those window
-         attributes are ignored anyway (deprecated since 35, edge-to-edge opt-out removed in 16). -->
+         statusBarColor/navigationBarColor on every API level — and under the edge-to-edge
+         enforcement that comes with targeting 35+ those window attributes are deprecated and
+         generally have no effect (Android 16 removes the opt-out entirely). -->
     <style name="Theme.Pulsar" parent="Theme.Material3.DayNight.NoActionBar" />
 
     <!-- Cold-start splash (core-splashscreen). Always the dark cosmic brand surface with the launcher

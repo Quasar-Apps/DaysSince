@@ -129,7 +129,7 @@ Gradle 9.5 → wrapper 9.6.1) plus Kotlin 2.4 and Compose BOM 2026.06 move as on
 partial-bump binary skew (`NoSuchMethodError`) that failed #77/#87 doesn't recur. `compileSdk`-only means
 newer APIs compile without opting into new runtime behavior.
 
-**Step 2 (shipped): `targetSdk = 36`.** Required by Play for all app updates from Aug 30, 2026.
+**Step 2 (this PR): `targetSdk = 36`.** Required by Play for all app updates from Aug 30, 2026.
 Opts into the Android 16 behavior changes; the audit found only three that touch this app, all
 already satisfied: predictive back (no `onBackPressed`/`KEYCODE_BACK` anywhere — back runs through
 Navigation Compose), edge-to-edge opt-out removal (already edge-to-edge; the dead XML system-bar
