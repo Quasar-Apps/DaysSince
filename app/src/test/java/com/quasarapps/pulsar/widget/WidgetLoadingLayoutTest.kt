@@ -9,7 +9,6 @@ import android.widget.ProgressBar
 import androidx.test.core.app.ApplicationProvider
 import com.quasarapps.pulsar.R
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -39,9 +38,17 @@ class WidgetLoadingLayoutTest {
     fun placeholder_hasAnOpaqueBackground() {
         val background = inflate().background
         assertNotNull("the placeholder must draw a background", background)
+        assertTrue(
+            "expected the shape drawable, was ${background!!.javaClass.simpleName}",
+            background is GradientDrawable,
+        )
         val solid = (background as GradientDrawable).color
         assertNotNull("the background must have a solid fill", solid)
-        assertNotEquals("the fill must not be transparent", 0, solid!!.defaultColor ushr 24)
+        assertEquals(
+            "the fill must be fully opaque",
+            0xFF,
+            solid!!.defaultColor ushr 24,
+        )
     }
 
     @Test
