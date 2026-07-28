@@ -76,13 +76,22 @@ jobs:
           path: app/build/reports/lint-results-release.*
           if-no-files-found: ignore
 
-  # Run the androidTest (instrumentation) suite on a Gradle Managed Device (GMD). The device is
+  # Run the androidTest (instrumentation) suite on Gradle Managed Devices (GMD). The devices are
   # declared in app/build.gradle.kts, so AGP provisions/boots/tears down the emulator and the exact
-  # same `:app:pixel2api30DebugAndroidTest` command runs here and locally. Kept as its own job so its
-  # slowness doesn't gate the fast JVM jobs.
+  # same `:app:pixel2api<NN>DebugAndroidTest` command runs here and locally. Kept as its own job so
+  # its slowness doesn't gate the fast JVM jobs.
+  #
+  # Matrix over API levels, same Pixel 2 profile on both, so the legs differ by platform version
+  # only: 30 is the old-platform coverage (minSdk 26 era), 36 exercises the Android 16 behavior
+  # changes the app opts into via targetSdk 36 (predictive back, edge-to-edge enforcement).
+  # fail-fast disabled so one leg's emulator flake doesn't cancel the other's evidence.
   instrumentation:
-    name: instrumentation tests
+    name: instrumentation tests (API ${{ matrix.api }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [30, 36]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -110,7 +119,9 @@ jobs:
 
       # GMD's setup task downloads the ATD system image via sdkmanager, which is licence-gated.
       # Accept all SDK licences up front so the install isn't blocked. (`yes` gets SIGPIPE once
-      # sdkmanager stops reading, so the pipe's non-zero exit is expected and ignored.)
+      # sdkmanager stops reading, so the pipe's non-zero exit is expected and ignored.) Accepting
+      # *all* licences matters: the android-36 aosp_atd image currently ships under the preview
+      # licence, not the regular android-sdk-license the API 30 image uses.
       - name: Accept Android SDK licences
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
@@ -130,20 +141,22 @@ jobs:
       - name: Cache ATD system image
         uses: actions/cache@v6
         with:
-          path: ${{ env.SDK_ROOT }}/system-images/android-30/aosp_atd
-          key: gmd-system-image-aosp-atd-30-v2
+          path: ${{ env.SDK_ROOT }}/system-images/android-${{ matrix.api }}/aosp_atd
+          key: gmd-system-image-aosp-atd-${{ matrix.api }}-v2
 
       # Install the emulator runtime, platform-tools and the ATD system image up front instead of
       # relying on AGP's managed-device setup to auto-resolve them. When a runner tooling update
       # leaves one of those components unresolved, AGP's setup task throws an opaque
       # `MissingValueException`; installing them explicitly here keeps the setup deterministic.
-      # (Pixel 2 + aosp-atd on a 64-bit runner resolves to the x86_64 image, with an x86 fallback.)
+      # (Pixel 2 + aosp-atd on a 64-bit runner resolves to the x86_64 image, with an x86 fallback —
+      # the fallback only exists for API 30; android-36 images are x86_64/arm64 only. The android-36
+      # image also requires emulator >= 35.4.9, which installing "emulator" fresh here satisfies.)
       - name: Install emulator + ATD system image
         run: |
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           "$SDKMANAGER" "emulator" "platform-tools"
-          "$SDKMANAGER" "system-images;android-30;aosp_atd;x86_64" \
-            || "$SDKMANAGER" "system-images;android-30;aosp_atd;x86"
+          "$SDKMANAGER" "system-images;android-${{ matrix.api }};aosp_atd;x86_64" \
+            || "$SDKMANAGER" "system-images;android-${{ matrix.api }};aosp_atd;x86"
 
       # Force software GPU (swiftshader_indirect). Headless runners have no GPU, and newer emulator
       # builds reject AGP's default `auto-no-window` mode ("Selected GPU option 'auto-no-window' is
@@ -158,7 +171,7 @@ jobs:
         run: |
           gmd() {
             ./gradlew -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
-              :app:pixel2api30DebugAndroidTest --no-daemon --stacktrace
+              :app:pixel2api${{ matrix.api }}DebugAndroidTest --no-daemon --stacktrace
           }
           if gmd; then
             exit 0
@@ -166,10 +179,11 @@ jobs:
           echo "::warning::Instrumentation run failed; retrying once before failing the job."
           gmd
 
+      # Name suffixed per matrix leg: upload-artifact v4+ hard-fails on duplicate artifact names.
       - name: Upload instrumentation test report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: android-test-report
+          name: android-test-report-api${{ matrix.api }}
           path: app/build/reports/androidTests/**
           if-no-files-found: ignore

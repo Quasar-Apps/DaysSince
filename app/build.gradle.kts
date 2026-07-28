@@ -81,8 +81,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Locale note: the English-baseline instrumented UI tests assert literal English copy and
-        // en-US dates, so they must run with the app in English. The CI Gradle Managed Device
-        // (`pixel2api30`, below) is en-US, so CI needs nothing extra. To run the connected suite on
+        // en-US dates, so they must run with the app in English. The CI Gradle Managed Devices
+        // (`pixel2api30`/`pixel2api36`, below) are en-US, so CI needs nothing extra. To run the connected suite on
         // a physical device whose system language is NOT English, pin the debug app to English
         // first (Android 13+):
         //   adb shell cmd locale set-app-locales com.quasarapps.pulsar.debug --locales en-US
@@ -147,15 +147,25 @@ android {
             isReturnDefaultValues = true
         }
 
-        // Gradle Managed Device: AGP provisions/boots/tears down the emulator, so the instrumentation
-        // suite runs with the same `./gradlew :app:pixel2api30DebugAndroidTest` command locally and in
-        // CI. `aosp-atd` is an Automated Test Device image — headless- and CI-optimised, and matches
-        // the app (no Google Play Services dependency).
+        // Gradle Managed Devices: AGP provisions/boots/tears down the emulator, so the instrumentation
+        // suite runs with the same `./gradlew :app:pixel2api<NN>DebugAndroidTest` command locally and
+        // in CI. `aosp-atd` is an Automated Test Device image — headless- and CI-optimised, and matches
+        // the app (no Google Play Services dependency). Two API levels, same device profile, so the CI
+        // legs differ by platform version only: 30 is the old-platform coverage (minSdk 26 era), 36
+        // exercises the Android 16 behavior changes the app opts into via targetSdk 36 (predictive
+        // back, edge-to-edge enforcement). Note the android-36 aosp_atd image currently ships under
+        // the preview license — CI accepts all SDK licenses up front, and locally a one-time
+        // `sdkmanager --licenses` does the same.
         managedDevices {
             localDevices {
                 create("pixel2api30") {
                     device = "Pixel 2"
                     apiLevel = 30
+                    systemImageSource = "aosp-atd"
+                }
+                create("pixel2api36") {
+                    device = "Pixel 2"
+                    apiLevel = 36
                     systemImageSource = "aosp-atd"
                 }
             }

@@ -46,14 +46,16 @@ this file is the fuller, developer-facing history.
   sw≥600dp displays (none declared). The transparent system-bar overrides in the XML theme
   were dropped as dead config: `enableEdgeToEdge()` overrides them at runtime on every API
   level, and Android 15+ ignores the window attributes entirely. Robolectric's default test
-  SDK follows `targetSdk`, so the JVM suite now runs on the SDK 36 android-all jar.
+  SDK follows `targetSdk`, so the JVM suite now runs on the SDK 36 android-all jar, and CI
+  runs the instrumented suite on an API 36 managed device alongside the API 30 one.
 - **Platform upgrade — `compileSdk` 35→37, Kotlin 2.2→2.4, AGP 9.2→9.3, and the AndroidX
   UI cohort.** Moved the whole compileSdk-coupled cohort in one deliberate step: Kotlin
   2.4.10 (Compose compiler +2 generations), Compose BOM 2026.06, AGP 9.3.0 (which raises
   the Gradle wrapper floor to 9.6.1), and `core-ktx`/`activity`/`navigation`/`lifecycle`/
   `work` to their current releases. Their AAR metadata requires `compileSdk` 36–37, so it
-  moves to 37 (AGP 9.3's maximum); `targetSdk` stays 35, decoupling the compile target from
-  opting into new runtime behavior. Bumping the cohort together avoids the partial-bump
+  moves to 37 (AGP 9.3's maximum); `targetSdk` stayed 35 in that step, decoupling the compile
+  target from opting into new runtime behavior — the opt-in landed separately as the
+  `targetSdk` 36 entry above. Bumping the cohort together avoids the partial-bump
   binary skew (`NoSuchMethodError` in the instrumented tests) that failed the earlier
   routine-bump attempts (#77, #87).
 
