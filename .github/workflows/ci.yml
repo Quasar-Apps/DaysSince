@@ -148,15 +148,20 @@ jobs:
       # relying on AGP's managed-device setup to auto-resolve them. When a runner tooling update
       # leaves one of those components unresolved, AGP's setup task throws an opaque
       # `MissingValueException`; installing them explicitly here keeps the setup deterministic.
-      # (Pixel 2 + aosp-atd on a 64-bit runner resolves to the x86_64 image, with an x86 fallback —
-      # the fallback only exists for API 30; android-36 images are x86_64/arm64 only. The android-36
-      # image also requires emulator >= 35.4.9, which installing "emulator" fresh here satisfies.)
+      # (Pixel 2 + aosp-atd on a 64-bit runner resolves to the x86_64 image. The x86 fallback is
+      # API 30-only: an x86 package doesn't exist for android-36, so falling back there would just
+      # shadow the real x86_64 install error with a "package not found". The android-36 image also
+      # requires emulator >= 35.4.9, which installing "emulator" fresh here satisfies.)
       - name: Install emulator + ATD system image
         run: |
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           "$SDKMANAGER" "emulator" "platform-tools"
-          "$SDKMANAGER" "system-images;android-${{ matrix.api }};aosp_atd;x86_64" \
-            || "$SDKMANAGER" "system-images;android-${{ matrix.api }};aosp_atd;x86"
+          if [ "${{ matrix.api }}" -eq 30 ]; then
+            "$SDKMANAGER" "system-images;android-30;aosp_atd;x86_64" \
+              || "$SDKMANAGER" "system-images;android-30;aosp_atd;x86"
+          else
+            "$SDKMANAGER" "system-images;android-${{ matrix.api }};aosp_atd;x86_64"
+          fi
 
       # Force software GPU (swiftshader_indirect). Headless runners have no GPU, and newer emulator
       # builds reject AGP's default `auto-no-window` mode ("Selected GPU option 'auto-no-window' is
