@@ -115,7 +115,7 @@ Keep the project healthy and current. Mostly infra; can run in parallel with Pha
 | 32 | Renovate/Dependabot + version-catalog update automation | S | 🟢 | ✅ done (Dependabot) |
 | 30 | Dependency bump pass (Compose BOM, navigation, etc.) | M | 🟡 | → via Dependabot PRs (#32) |
 | 29 | Resolve the `MonochromeLauncherIcon` TODO (needs vector icon source) | M | 🟡 | ⛔ blocked on the vector icon asset |
-| 33 | compileSdk/targetSdk migration | M | 🟡 | 🔄 `compileSdk`→37 + AndroidX cohort this PR; `targetSdk`→36 follow-up |
+| 33 | compileSdk/targetSdk migration | M | 🟡 | ✅ `compileSdk`→37 + cohort (#89); `targetSdk`→36 this PR |
 | 44 | **Raise the Kover coverage floor incrementally** — the floor is set at 60% against a current JVM unit coverage of ~71%, leaving an 11-point gap where significant regressions go undetected before CI catches them. After each feature phase, bump the floor to within 5 points of the measured coverage, keeping it a meaningful safety net rather than a formality. | S | 🟢 | |
 
 **Acceptance:** CI enforces a coverage floor; a bot opens dependency-update PRs; build green on bumped versions; Kover floor stays within 5 points of measured coverage after each phase.
@@ -129,12 +129,15 @@ Gradle 9.5 → wrapper 9.6.1) plus Kotlin 2.4 and Compose BOM 2026.06 move as on
 partial-bump binary skew (`NoSuchMethodError`) that failed #77/#87 doesn't recur. `compileSdk`-only means
 newer APIs compile without opting into new runtime behavior.
 
-**Step 2 (follow-up PR): `targetSdk = 36`.** Opts into the Android 16 behavior changes that apply here:
-predictive-back, edge-to-edge enforcement (already edge-to-edge — verify insets), foreground-service /
-scheduling changes (we use WorkManager + an `updatePeriodMillis` alarm — verify the widget refresh still
-behaves), notifications (none used today). Test the full unit + instrumented suite on an API 36 managed
-device (add a `pixel*api36` GMD alongside the API 30 one) and a manual device pass on the widget /
-deep-link / edit flows. Update the `OldTargetApi` lint note in `app/lint.xml` and this roadmap once shipped.
+**Step 2 (this PR): `targetSdk = 36`.** Required by Play for all app updates from Aug 30, 2026.
+Opts into the Android 16 behavior changes; the audit found only three that touch this app, all
+already satisfied: predictive back (no `onBackPressed`/`KEYCODE_BACK` anywhere — back runs through
+Navigation Compose), edge-to-edge opt-out removal (already edge-to-edge; the dead XML system-bar
+overrides were dropped), and sw≥600dp orientation/aspect-ratio freedom (nothing declared). CI runs
+the instrumented suite on an API 36 GMD alongside the API 30 one, and the Robolectric suite runs at
+SDK 36 (its default follows `targetSdk`). **Remaining before release:** a manual device pass on an
+Android 16 device — back gestures (gesture + 3-button nav), widget → deep-link → back, insets on a
+cutout device in landscape, and the widget refresh/rollover.
 
 ---
 

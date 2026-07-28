@@ -36,13 +36,27 @@ this file is the fuller, developer-facing history.
   placing one that is permanently stuck on its setup prompt.
 
 ### Changed
+- **`targetSdk` 35→36 — the Google Play target-API-level requirement (mandatory for app
+  updates from Aug 30, 2026).** Opts into the Android 16 behavior changes on Android 16+
+  devices. Audit of what actually applies here: predictive back becomes the default back
+  path (the app has no `onBackPressed`/`KEYCODE_BACK` handling — back already runs through
+  Navigation Compose's dispatcher, which supports it); the edge-to-edge opt-out is removed
+  (the app never used it — both activities call `enableEdgeToEdge()` and lay out with
+  `safeDrawing` insets); orientation/resizability/aspect-ratio restrictions are ignored on
+  sw≥600dp displays (none declared). The transparent system-bar overrides in the XML theme
+  were dropped as dead config: `enableEdgeToEdge()` overrides them at runtime on every API
+  level, and under the edge-to-edge enforcement that comes with targeting Android 15+ the
+  window attributes are deprecated and generally have no effect. Robolectric's default test
+  SDK follows `targetSdk`, so the JVM suite now runs on the SDK 36 android-all jar, and CI
+  runs the instrumented suite on an API 36 managed device alongside the API 30 one.
 - **Platform upgrade — `compileSdk` 35→37, Kotlin 2.2→2.4, AGP 9.2→9.3, and the AndroidX
   UI cohort.** Moved the whole compileSdk-coupled cohort in one deliberate step: Kotlin
   2.4.10 (Compose compiler +2 generations), Compose BOM 2026.06, AGP 9.3.0 (which raises
   the Gradle wrapper floor to 9.6.1), and `core-ktx`/`activity`/`navigation`/`lifecycle`/
   `work` to their current releases. Their AAR metadata requires `compileSdk` 36–37, so it
-  moves to 37 (AGP 9.3's maximum); `targetSdk` stays 35, decoupling the compile target from
-  opting into new runtime behavior. Bumping the cohort together avoids the partial-bump
+  moves to 37 (AGP 9.3's maximum); `targetSdk` stayed 35 in that step, decoupling the compile
+  target from opting into new runtime behavior — the opt-in landed separately as the
+  `targetSdk` 36 entry above. Bumping the cohort together avoids the partial-bump
   binary skew (`NoSuchMethodError` in the instrumented tests) that failed the earlier
   routine-bump attempts (#77, #87).
 
