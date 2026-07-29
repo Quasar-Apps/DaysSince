@@ -12,6 +12,22 @@ this file is the fuller, developer-facing history.
 ## [Unreleased]
 
 ### Fixed
+- **Widgets could appear completely invisible — placed and tappable, but drawing nothing**
+  (reported on a Galaxy S25 Ultra with the Play build). Two defects compounded:
+  - The pre-render placeholder (`widget_loading.xml`, what the launcher shows until Glance
+    posts its first render) was an empty transparent FrameLayout. Glance renders inside a
+    WorkManager job, and when that job is deferred or blocked (OEM battery management such
+    as One UI app sleep, or a broken WorkManager) no error layout is ever posted — the
+    "placeholder" simply is the widget, forever, and ours was invisible. It is now a branded
+    card with a spinner, so a pending render is visible and reads as loading.
+  - Guarded the render pipeline against R8: Glance runs every render in
+    `androidx.glance.session.SessionWorker`, which WorkManager instantiates reflectively by
+    class name and for which Glance ships no keep rule. Through work-runtime 2.9 the
+    library's own consumer rule pinned every worker unconditionally — that is what kept
+    v1.0.1's widgets alive — but work-runtime 2.10+ relaxed it to `-keepnames`, which under
+    R8 full mode only protects what R8 already traced as reachable. An explicit app rule now
+    pins every `ListenableWorker` name + constructor (same defect class, and same fix shape,
+    as the v1.0.1 `WorkDatabase_Impl` launch crash).
 - **A corrupt store could silently destroy every milestone on the next write.** Every
   write is a read-modify-write, and the decode used to flatten "nothing stored" and
   "stored but unreadable" to the same empty list. So a single unreadable

@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Brief placeholder shown before Glance renders the real content. -->
+<!-- Placeholder the launcher shows from placement until Glance posts the first real render.
+
+     This must be VISIBLY non-empty: Glance renders through a WorkManager job, and when that job is
+     deferred or never runs (OEM battery management — e.g. One UI app sleep — or a broken WorkManager)
+     no error layout is ever posted; the widget just shows this layout forever. An earlier version of
+     this file was an empty transparent FrameLayout, which made exactly that failure state render as a
+     fully invisible widget (reported on a Galaxy S25 Ultra with the Play build). A branded card with
+     a spinner keeps the pending state visible and obviously "still loading" instead.
+
+     RemoteViews-safe views only (FrameLayout/ProgressBar) — the launcher inflates this, not the app. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent" />
+    android:background="@drawable/widget_loading_bg">
+
+    <ProgressBar
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="center"
+        android:indeterminate="true"
+        android:indeterminateTint="@color/widget_loading_spinner" />
+
+</FrameLayout>
