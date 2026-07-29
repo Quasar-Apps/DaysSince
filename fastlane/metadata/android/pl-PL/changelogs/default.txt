@@ -1,3 +1,3 @@
-Witaj w Pulsar — pierwsze wydanie.
+Naprawiono: widżety na ekranie głównym mogły być puste lub niewidoczne po dodaniu. Teraz wyświetlają się poprawnie.
 
-Licz dni, godziny i minuty od chwil, które są dla Ciebie ważne, dzięki wyrazistym kartom z gradientem i dwóm widżetom na ekranie głównym. W pełni prywatny: bez konta, bez sieci, bez uprawnień, bez śledzenia. Dostępny w 10 językach.
+Ponadto w tej aktualizacji: lepsza ochrona przed utratą Twoich wydarzeń, konfiguracja widżetu przetrwa teraz obrót telefonu, a aplikacja została zaktualizowana pod kątem Androida 16.
