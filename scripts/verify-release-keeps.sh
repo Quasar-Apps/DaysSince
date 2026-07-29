@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Verifies that the constructors Pulsar's release build reaches ONLY by reflection survived R8.
+# Verifies that constructors reachable only by reflection survived R8 in the release build.
 #
 # Why this exists: twice now, a shipped Play build has been broken by R8 stripping a constructor that
 # nothing calls directly. Neither failure was visible to any test — debug builds skip R8 entirely, so
