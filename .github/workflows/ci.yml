@@ -68,6 +68,14 @@ jobs:
       - name: assembleRelease + lintRelease
         run: ./gradlew :app:assembleRelease :app:lintRelease --no-daemon --stacktrace
 
+      # Assert that the constructors only reachable by reflection survived R8. Two shipped Play
+      # builds have been broken by R8 stripping one (the WorkDatabase_Impl launch crash, then the
+      # OverwritingInputMerger failure that made every widget invisible) and neither was catchable by
+      # a test, because debug builds skip R8 entirely. This reads the R8 seeds report the step above
+      # just produced, so it costs nothing and fails the build instead of the release.
+      - name: Verify reflective entry points survived R8
+        run: ./scripts/verify-release-keeps.sh
+
       - name: Upload release lint report
         if: always()
         uses: actions/upload-artifact@v7

@@ -12,22 +12,37 @@ this file is the fuller, developer-facing history.
 ## [Unreleased]
 
 ### Fixed
-- **Widgets could appear completely invisible — placed and tappable, but drawing nothing**
-  (reported on a Galaxy S25 Ultra with the Play build). Two defects compounded:
-  - The pre-render placeholder (`widget_loading.xml`, what the launcher shows until Glance
-    posts its first render) was an empty transparent FrameLayout. Glance renders inside a
-    WorkManager job, and when that job is deferred or blocked (OEM battery management such
-    as One UI app sleep, or a broken WorkManager) no error layout is ever posted — the
-    "placeholder" simply is the widget, forever, and ours was invisible. It is now a branded
-    card with a spinner, so a pending render is visible and reads as loading.
-  - Guarded the render pipeline against R8: Glance runs every render in
-    `androidx.glance.session.SessionWorker`, which WorkManager instantiates reflectively by
-    class name and for which Glance ships no keep rule. Through work-runtime 2.9 the
-    library's own consumer rule pinned every worker unconditionally — that is what kept
-    v1.0.1's widgets alive — but work-runtime 2.10+ relaxed it to `-keepnames`, which under
-    R8 full mode only protects what R8 already traced as reachable. An explicit app rule now
-    pins every `ListenableWorker` name + constructor (same defect class, and same fix shape,
-    as the v1.0.1 `WorkDatabase_Impl` launch crash).
+- **Widgets never rendered in the shipped Play builds (10000/10001) — placed widgets were
+  completely invisible.** Root cause confirmed from field logcat on a Galaxy S25 Ultra:
+  `WM-WorkerWrapper: Could not create Input Merger androidx.work.OverwritingInputMerger`.
+  Before running any one-time work, WorkManager reflectively instantiates the request's
+  `InputMerger`; work-runtime 2.9's consumer rule kept InputMerger subclasses by name only,
+  and R8 full mode strips the constructor a kept class never calls directly — so **every
+  one-time WorkManager job in the shipped release build failed**, and Glance executes every
+  widget render as one-time work. No render was ever posted; the launcher showed the
+  pre-render placeholder forever. (Same defect class as the v1.0.1 `WorkDatabase_Impl`
+  launch crash: a library consumer rule that doesn't survive R8 full mode, invisible to
+  debug builds and the whole test suite.) Three-part fix:
+  - work-runtime 2.11.2 (already shipped in the platform-upgrade cohort) fixes the library
+    rule itself — verified in the release build's R8 seeds.
+  - App-side ProGuard rules now pin the name **and constructor** of every
+    `ListenableWorker` and every `InputMerger` unconditionally, so a future library-rule
+    relaxation (exactly what happened to the worker rule in work-runtime 2.10) can't
+    silently regress either reflective path again.
+  - The pre-render placeholder (`widget_loading.xml`) was an empty transparent FrameLayout —
+    which is what made this failure state *invisible* rather than visibly broken. It is now
+    a branded card with a spinner, so any future render-blocking state reads as "loading"
+    instead of nothing.
+
+### Build
+- **CI now verifies that reflection-only constructors survive R8**
+  (`scripts/verify-release-keeps.sh`, run in the release job). Both production failures so
+  far — the `WorkDatabase_Impl` launch crash and the `OverwritingInputMerger` widget
+  blackout — were R8 stripping a constructor with no call site, and neither was catchable by
+  any test, because debug builds skip R8. The check reads the R8 seeds report that
+  `assembleRelease` already emits and fails the build if a listed constructor is no longer
+  pinned. Verified against the shipped v1.0.1 seeds, where it correctly fails on
+  `OverwritingInputMerger()`.
 - **A corrupt store could silently destroy every milestone on the next write.** Every
   write is a read-modify-write, and the decode used to flatten "nothing stored" and
   "stored but unreadable" to the same empty list. So a single unreadable
