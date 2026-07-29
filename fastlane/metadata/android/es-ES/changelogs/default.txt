@@ -1,3 +1,3 @@
-Te damos la bienvenida a Pulsar: la primera versión.
+Corregido: los widgets de la pantalla de inicio podían aparecer en blanco o invisibles tras añadirlos. Ahora se muestran correctamente.
 
-Cuenta los días, horas y minutos desde los momentos que más te importan, con vistosas tarjetas de degradado y dos widgets para la pantalla de inicio. Totalmente privado: sin cuenta, sin red, sin permisos, sin seguimiento. Disponible en 10 idiomas.
+También en esta actualización: mayor protección frente a la pérdida de tus hitos, la configuración del widget ahora sobrevive al girar el teléfono y la app se ha actualizado para Android 16.

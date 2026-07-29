@@ -11,6 +11,8 @@ this file is the fuller, developer-facing history.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-07-29
+
 ### Fixed
 - **Widgets never rendered in the shipped Play builds (10000/10001) — placed widgets were
   completely invisible.** Root cause confirmed from field logcat on a Galaxy S25 Ultra:
@@ -171,6 +173,7 @@ First public release.
 - DST-correct elapsed-time math (`ElapsedTime`), unit-tested across UTC, non-UTC
   zones, and both DST transition directions.
 
-[Unreleased]: https://github.com/QuasarApps/Pulsar/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/QuasarApps/Pulsar/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/QuasarApps/Pulsar/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/QuasarApps/Pulsar/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/QuasarApps/Pulsar/releases/tag/v1.0.0
