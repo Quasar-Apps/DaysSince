@@ -33,6 +33,16 @@ this file is the fuller, developer-facing history.
     which is what made this failure state *invisible* rather than visibly broken. It is now
     a branded card with a spinner, so any future render-blocking state reads as "loading"
     instead of nothing.
+
+### Build
+- **CI now verifies that reflection-only constructors survive R8**
+  (`scripts/verify-release-keeps.sh`, run in the release job). Both production failures so
+  far — the `WorkDatabase_Impl` launch crash and the `OverwritingInputMerger` widget
+  blackout — were R8 stripping a constructor with no call site, and neither was catchable by
+  any test, because debug builds skip R8. The check reads the R8 seeds report that
+  `assembleRelease` already emits and fails the build if a listed constructor is no longer
+  pinned. Verified against the shipped v1.0.1 seeds, where it correctly fails on
+  `OverwritingInputMerger()`.
 - **A corrupt store could silently destroy every milestone on the next write.** Every
   write is a read-modify-write, and the decode used to flatten "nothing stored" and
   "stored but unreadable" to the same empty list. So a single unreadable
