@@ -1,3 +1,3 @@
-Willkommen bei Pulsar 1.0 – die erste Version.
+Behoben: Widgets auf dem Startbildschirm konnten nach dem Hinzufügen leer oder unsichtbar bleiben. Sie werden jetzt korrekt angezeigt.
 
-Zähle die Tage, Stunden und Minuten seit den Momenten, die dir wichtig sind, mit kräftigen Karten im Farbverlauf und zwei Widgets für den Startbildschirm. Vollständig privat: kein Konto, kein Netzwerk, keine Berechtigungen, kein Tracking. In 10 Sprachen verfügbar.
+Außerdem in diesem Update: besserer Schutz davor, deine Meilensteine zu verlieren, die Widget-Einrichtung übersteht jetzt das Drehen des Geräts, und die App wurde für Android 16 aktualisiert.

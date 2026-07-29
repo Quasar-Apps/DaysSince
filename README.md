@@ -6,7 +6,7 @@ whatever. Each milestone gets a bold gradient card in the app and an optional
 home-screen widget.
 
 - Minimum Android version: **8.0 (API 26)**
-- Targets Android: **15 (API 35)**
+- Targets Android: **16 (API 36)**
 - Offline-first. No accounts, no permissions, no tracking — your milestones never leave your device.
 
 ---
@@ -133,8 +133,9 @@ boundary, so the in-app detail screen stays live to the minute.
 
 ### Android Studio
 
-1. Open the project root in Android Studio Otter 3 Feature Drop (2025.2.3) or newer
-   (required by AGP 9.2 / the Kotlin 2.2 Compose compiler plugin).
+1. Open the project root in a current Android Studio — one that supports AGP 9.3 and
+   the Kotlin 2.4 Compose compiler plugin (see the AGP ↔ Android Studio compatibility
+   table for the minimum release).
 2. Allow Gradle sync.
 3. Run the `app` configuration on an emulator or device.
 
@@ -173,8 +174,9 @@ On every push and pull request, CI runs three jobs — see
 
 - **debug build + tests** — `assembleDebug` + `testDebugUnitTest`.
 - **release build + lint** — `assembleRelease` + `lintRelease`.
-- **instrumentation tests** — `connectedDebugAndroidTest` on an emulator
-  (API 30).
+- **instrumentation tests** — the `androidTest` suite on Gradle Managed
+  Devices, one job per API level (30 and 36 — the latter exercises the
+  Android 16 behavior changes the app targets).
 
 ---
 

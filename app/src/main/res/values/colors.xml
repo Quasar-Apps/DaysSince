@@ -3,4 +3,7 @@
     <!-- Splash window background: the dark cosmic brand surface (matches the launcher icon and the
          in-app splash), shown before Compose draws. Kept in sync with PulsarDarkColors.background. -->
     <color name="splash_background">#0D0712</color>
+
+    <!-- Spinner tint in the widget's pre-render placeholder (70% white on the dark card above). -->
+    <color name="widget_loading_spinner">#B3FFFFFF</color>
 </resources>

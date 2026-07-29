@@ -19,6 +19,39 @@
 # break the periodic widget refresh in release builds.
 -keep class com.quasarapps.pulsar.widget.WidgetRefreshWorker { <init>(...); }
 
+# Pin the name and constructor of EVERY worker — ours above, and the library ones. This exists for
+# androidx.glance.session.SessionWorker: Glance performs every widget render inside that
+# CoroutineWorker, WorkManager instantiates it reflectively by the class-name string written into its
+# database at enqueue time, and Glance ships no keep rule of its own for it. Through work-runtime 2.9
+# the library's consumer rule pinned every ListenableWorker subclass unconditionally
+# (`-keep public class * extends androidx.work.ListenableWorker { public <init>(...); }`) — that rule
+# is what kept widget rendering alive in v1.0.1 — but work-runtime 2.10+ relaxed it to `-keepnames`
+# (allowshrinking), which under R8 full mode only protects a worker R8 already traced as reachable.
+# If that reachability chain ever breaks, the failure mode is grim: no crash, no error box, tests
+# green (debug skips R8) — WorkManager just logs "Could not instantiate" and every widget silently
+# shows its initialLayout forever. Same defect class as the WorkDatabase_Impl rule above, pinned for
+# the same reason.
+-keep class * extends androidx.work.ListenableWorker {
+    <init>(...);
+}
+
+# Same defect class, one reflective hop later — and this one is the CONFIRMED cause of the invisible
+# widgets shipped in versionCode 10001. Before running any one-time work, WorkerWrapper instantiates
+# the request's InputMerger (default: androidx.work.OverwritingInputMerger) via
+# Class.forName(name).getDeclaredConstructor().newInstance(). work-runtime 2.9's consumer rule kept
+# InputMerger subclasses BY NAME ONLY (`-keep class * extends androidx.work.InputMerger` — no member
+# clause), and R8 full mode does not implicitly keep a kept class's no-arg constructor. Result in the
+# shipped Play build: every one-time job failed at "Could not create Input Merger
+# androidx.work.OverwritingInputMerger" (field logcat, Galaxy S25 Ultra) — and since Glance executes
+# every widget render as one-time work, no widget ever rendered from that build; the launcher showed
+# the (then-transparent) initialLayout forever. work-runtime 2.11 fixed its rule (`-keepnames` plus a
+# keepclassmembers constructor rule), so current builds are safe via the library — this pins the
+# constructor unconditionally so a future library-rule change can't quietly regress it, exactly as
+# happened to the ListenableWorker rule in 2.10.
+-keep class * extends androidx.work.InputMerger {
+    <init>(...);
+}
+
 # WorkManager (used for the periodic widget refresh) initializes at process startup via
 # androidx.startup's InitializationProvider, which builds its Room-backed WorkDatabase. Room creates
 # the generated WorkDatabase_Impl reflectively. room-runtime's own consumer rule keeps RoomDatabase

@@ -1,0 +1,100 @@
+package com.quasarapps.pulsar.widget
+
+import android.app.Application
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.quasarapps.pulsar.data.Milestone
+import com.quasarapps.pulsar.data.MilestonesRepository
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+/**
+ * Holds the widget-configuration state for [WidgetConfigActivity].
+ *
+ * The binding write lives here rather than in a `rememberCoroutineScope()` inside the activity's
+ * composition: that scope is cancelled when the composition leaves, so a device rotation between the
+ * user's tap and the DataStore write would cancel the write and leave the widget permanently
+ * unbound (the activity had already been told to finish). [viewModelScope] is retained across
+ * configuration changes, so the write always completes and the recreated activity picks the result
+ * up from [bound].
+ */
+class WidgetConfigViewModel internal constructor(
+    app: Application,
+    private val repo: MilestonesRepository,
+    // Test seam. Glance's updateAll drives a real AppWidgetManager, which Robolectric never brings to
+    // completion, so a unit test substitutes a no-op rather than hanging on it. Production always gets
+    // the real refresh, and still awaits it before reporting success (see bind).
+    private val refreshWidgets: suspend (Context) -> Unit = { MilestoneWidgets.refreshAll(it) },
+) : AndroidViewModel(app) {
+
+    constructor(app: Application) : this(app, MilestonesRepository(app))
+
+    val milestones: StateFlow<List<Milestone>> = repo.milestones
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _bound = MutableStateFlow(false)
+
+    /**
+     * Flips to true once the binding is durably written and the widgets have been refreshed — the
+     * activity's cue to finish with RESULT_OK. Survives rotation with this view model, so the result
+     * isn't lost if the activity is recreated mid-write.
+     */
+    val bound: StateFlow<Boolean> = _bound.asStateFlow()
+
+    // True only while a bind is in flight, so a double tap (or a re-tap after rotation) can't enqueue
+    // a second write. Deliberately a flag set *before* launching rather than the Job that launch
+    // returns: viewModelScope dispatches on Main.immediate, so when the body completes without
+    // suspending (a write that throws straight away) the finally clears the field before launch even
+    // returns — and the assignment would then put the finished Job back, wedging every later tap.
+    private var binding = false
+
+    fun bind(appWidgetId: Int, milestoneId: String, transparent: Boolean) {
+        if (_bound.value || binding) return
+        binding = true
+        viewModelScope.launch {
+            try {
+                if (!repo.bindWidget(appWidgetId, milestoneId, transparent)) {
+                    // The repository refused the write rather than clobber an unreadable bindings
+                    // store, and refusing doesn't throw. Reporting success here would finish with
+                    // RESULT_OK and have Android place a widget that was never bound — permanently
+                    // stuck on its setup prompt. Staying unbound leaves RESULT_CANCELED, so no
+                    // broken widget is placed.
+                    return@launch
+                }
+                try {
+                    // Best-effort, and deliberately after the write: the binding is already durable,
+                    // and the widget re-renders on its next update regardless. A refresh failure
+                    // (AppWidgetManager is absent on some devices/profiles — same guard as
+                    // MainActivity.onCreate) must not stop the activity reporting success, or the user
+                    // would be left staring at an unconfigured widget.
+                    refreshWidgets(getApplication())
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (refresh: Exception) {
+                    // Ignored on purpose — see above. Exception, not Throwable: an Error (OOM,
+                    // LinkageError) is not something a best-effort widget redraw should absorb.
+                }
+                _bound.value = true
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (write: Exception) {
+                // The DataStore write failed (IO error, unreadable store). Leave `bound` false so the
+                // activity stays put with its RESULT_CANCELED, rather than claiming a binding that was
+                // never persisted — and let the exception stop here: an uncaught throw in
+                // viewModelScope would take the whole app down. Tapping again retries.
+                //
+                // Exception rather than Throwable so a genuinely fatal Error still propagates instead
+                // of being silently swallowed. CancellationException is an Exception too, hence the
+                // explicit rethrow above it.
+            } finally {
+                binding = false
+            }
+        }
+    }
+}

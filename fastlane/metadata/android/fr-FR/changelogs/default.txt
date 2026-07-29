@@ -1,3 +1,3 @@
-Bienvenue dans Pulsar 1.0 — la toute première version.
+Corrigé : les widgets de l'écran d'accueil pouvaient rester vides ou invisibles après leur ajout. Ils s'affichent désormais correctement.
 
-Comptez les jours, heures et minutes depuis les moments qui comptent pour vous, avec des cartes au dégradé vif et deux widgets pour l'écran d'accueil. Entièrement privé : aucun compte, aucun réseau, aucune autorisation, aucun pistage. Disponible en 10 langues.
+Également dans cette mise à jour : une meilleure protection contre la perte de vos événements, la configuration du widget survit maintenant à la rotation du téléphone, et l'application est mise à jour pour Android 16.

@@ -36,11 +36,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,15 +51,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.quasarapps.pulsar.ElapsedTime
 import com.quasarapps.pulsar.MainActivity
 import com.quasarapps.pulsar.R
 import com.quasarapps.pulsar.data.Milestone
-import com.quasarapps.pulsar.data.MilestonesRepository
 import com.quasarapps.pulsar.ui.theme.PulsarTheme
 import com.quasarapps.pulsar.ui.theme.accentBrush
 import com.quasarapps.pulsar.util.LocalizedDateFormat
-import kotlinx.coroutines.launch
 
 /**
  * Launched when a widget is placed (android:configure). Lets the user pick the milestone this widget
@@ -82,22 +81,26 @@ class WidgetConfigActivity : ComponentActivity() {
         }
 
         enableEdgeToEdge()
-        val repo = MilestonesRepository(this)
 
         setContent {
             PulsarTheme {
-                val scope = rememberCoroutineScope()
-                val milestones by repo.milestones.collectAsState(initial = emptyList())
+                val vm: WidgetConfigViewModel = viewModel()
+                val milestones by vm.milestones.collectAsState()
+                val bound by vm.bound.collectAsState()
+
+                // The bind runs in the view model's retained scope, so it survives a rotation mid-write;
+                // this is where its completion is turned into the activity result. On a recreation the
+                // fresh activity re-reads the already-true state and finishes correctly.
+                LaunchedEffect(bound) {
+                    if (bound) {
+                        setResult(RESULT_OK, resultIntent(appWidgetId))
+                        finish()
+                    }
+                }
+
                 WidgetConfigScreen(
                     milestones = milestones,
-                    onPick = { id, transparent ->
-                        scope.launch {
-                            repo.bindWidget(appWidgetId, id, transparent)
-                            MilestoneWidgets.refreshAll(applicationContext)
-                            setResult(RESULT_OK, resultIntent(appWidgetId))
-                            finish()
-                        }
-                    },
+                    onPick = { id, transparent -> vm.bind(appWidgetId, id, transparent) },
                     onOpenApp = {
                         startActivity(Intent(this, MainActivity::class.java))
                     },

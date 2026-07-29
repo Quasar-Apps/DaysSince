@@ -21,10 +21,17 @@ Ship-blocking fixes for the next patch release. All low-risk, all with test cove
 | 4 | Guard a future *time* on today's date (mirror the date picker's clamp) | S | 🟢 | this PR |
 | 25 | Test: blank title resolves to the *localized* resource (en + de) | S | 🟢 | this PR |
 | 26 | Test: removing a widget unbinds it | S | 🟢 | this PR |
+| 37 | **Guard write-path JSON decode against silent data loss** — `MilestoneJson.decode` returns `emptyList()` on any parse failure; every `dataStore.edit` call reads and decodes the stored list before mutating it, so a corrupted store causes the next `upsert`/`delete`/`restore` to silently persist a single-item list and permanently destroy all other milestones. Fix: if decode returns empty for a non-blank stored value, abort the edit block rather than proceeding with an empty baseline. | S | 🟢 | ✅ this PR |
+| 38 | **Tag `v1.0.1` patch release** — the R8 `WorkDatabase_Impl` launch crash (the Google Play "opens, then keeps crashing" rejection of versionCode 10000) and the `AppWidgetManager` NPE guard are already fixed in HEAD (`proguard-rules.pro`, `WidgetRefreshScheduler`). Cut the tag to ship the fix. | S | 🟢 | ✅ shipped — approved by Play |
+| 39 | **Move `WidgetConfigActivity` binding into a `ViewModel`** — `bindWidget` + `refreshAll` run in a `rememberCoroutineScope()` (tied to the composition). A device rotation between the user's tap and the DataStore write cancels the scope, leaving the widget permanently unbound. Move the binding call to `viewModelScope` (survives rotation) or `lifecycleScope` (tied to the Activity). | S | 🟢 | ✅ this PR (`viewModelScope`) |
+| 45 | Test: write-path decode failure does not overwrite existing milestones | S | 🟢 | ✅ this PR |
+| 46 | Test: `WidgetConfigActivity` binding survives a configuration change | S | 🟢 | ✅ this PR |
 
 **Acceptance:** non-English blank titles persist the translated default; the widget-bindings map
 stays bounded across add/remove cycles; editing a deleted milestone dismisses instead of creating;
-a future time on today no longer silently reads "0"; unit + instrumented suites green.
+a future time on today no longer silently reads "0"; a corrupt `milestones_json` value cannot wipe
+the milestone list on the next write; binding a widget survives rotation; unit + instrumented suites green;
+`v1.0.1` tagged and published.
 
 ---
 
@@ -39,10 +46,13 @@ One coherent, battery-aware refresh strategy; make the widget→app deep link su
 | 8 | Remove the double redraw (in-process `refreshAll` + WorkManager backstop) | S | 🟡 |
 | 9 | Call `ensureScheduled` on app start as a safety net | S | 🟢 |
 | 5 | `MainActivity` deep-link robustness: `singleTop` + `onNewIntent` rewiring (moved from Phase 0 — needs intent→recompose plumbing, latent-only today) | M | 🟡 |
+| 40 | **Widget binding GC pass** — if the app is force-stopped between a widget removal and the WorkManager unbind job running, the binding entry persists forever. On `MilestoneGlanceWidgetReceiver.onUpdate` (and app start), cross-reference stored binding IDs against `AppWidgetManager.getAppWidgetIds()` and prune any entries whose widget ID is no longer registered. | S | 🟢 |
+| 41 | **Integration-test the dual refresh paths under battery/Doze constraints** — the three-layer refresh strategy (immediate one-off → hourly WorkManager → 6 h `updatePeriodMillis` backstop) is well-designed but the interaction between layers is untested. Add tests covering: (a) periodic work cancellation when the last widget is removed, (b) re-arming on app start after a force-stop wipes WorkManager's database, and (c) no duplicate work entries when `ensureScheduled` is called repeatedly. | M | 🟡 |
 
 **Acceptance:** a single documented source of refresh truth; no WorkManager enqueue with zero widgets;
 widget still updates within seconds of an edit and rolls over daily; re-tapping a widget while the app
-runs deep-links correctly without losing in-app state.
+runs deep-links correctly without losing in-app state; stale binding entries are pruned on the next
+app start or widget update; no duplicate periodic work entries under rapid scheduling calls.
 
 ---
 
@@ -60,9 +70,11 @@ User-facing quality across all 10 locales and assistive tech.
 | 15 | Verify the detail hero under large font scale | S | 🟡 |
 | 16 | Verify WCAG AA contrast on the Solar accent + scrim | S | 🟢 |
 | 27 | Snapshot tests for accent gradients & the "new beginning" state | M | 🟢 |
+| 42 | **Reactive `rememberReduceMotion`** — the current `remember { Settings.Global.getFloat(…) }` (no key) reads `ANIMATOR_DURATION_SCALE` once at composition time and never re-reads it. The README advertises "respects the system reduce-motion setting" but this only holds at cold start; toggling it while the app is open has no effect until a restart. Replace with a `ContentObserver`-backed `produceState` that re-queries whenever the system setting changes. | S | 🟢 |
 
 **Acceptance:** lint fails on new hardcoded strings; TalkBack announces each card as one labeled button;
-contrast verified with a tool; snapshot baselines committed.
+contrast verified with a tool; snapshot baselines committed; toggling system reduce-motion while the
+app is open immediately stops/starts the `CountUpNumber` animation.
 
 ---
 
@@ -81,9 +93,15 @@ Reduce recomposition churn and centralize wiring. Internal-only, no behavior cha
 | 23 | Consider type-safe Compose navigation | M | 🟡 |
 | 24 | Document/justify the two-DataStore split | S | 🟢 |
 | 28 | Unit-test the `WidgetUi` font-size / cap pure functions | S | 🟢 |
+| 34 | Migrate to `kotlinx-serialization` for milestone/binding JSON | M | 🟡 |
+| 35 | In-memory `StateFlow` caching in `MilestonesRepository` | S | 🟢 |
+| 36 | Review DST `ElapsedTime` logic vs. "Calendar Days" — also audit `SortOrder.MOST_DAYS`, which sorts by stored `date`/`time` fields (a calendar sort) rather than computed elapsed seconds. Two milestones on the same calendar date but across a DST transition sort identically despite having different real elapsed durations. Decide whether to document the calendar-sort contract explicitly or switch to a true elapsed-time sort via `ElapsedTime.sincePickedDhm`. | S | 🟡 |
+| 43 | **Use a unique WorkManager enqueue for widget unbind** — `WidgetRefreshScheduler.unbindWidgets` calls `WorkManager.enqueue` (non-unique). Rapid widget removals queue multiple cleanup workers, each performing a separate DataStore write. Switch to `enqueueUniqueWork` with `ExistingWorkPolicy.APPEND_OR_REPLACE` and merge the `unbindIds` arrays, so concurrent removals batch into one write. | S | 🟢 |
 
 **Acceptance:** no recomposition regressions; repositories created in one place; nav refactor (if done)
-keeps all instrumented nav tests green.
+keeps all instrumented nav tests green. Migration to `kotlinx-serialization` preserves all existing
+stored data (round-trip verified). `MOST_DAYS` sort contract documented or corrected. Unbind cleanup
+batches into a single DataStore write per removal event.
 
 ---
 
@@ -97,19 +115,29 @@ Keep the project healthy and current. Mostly infra; can run in parallel with Pha
 | 32 | Renovate/Dependabot + version-catalog update automation | S | 🟢 | ✅ done (Dependabot) |
 | 30 | Dependency bump pass (Compose BOM, navigation, etc.) | M | 🟡 | → via Dependabot PRs (#32) |
 | 29 | Resolve the `MonochromeLauncherIcon` TODO (needs vector icon source) | M | 🟡 | ⛔ blocked on the vector icon asset |
-| 33 | Plan the compileSdk/targetSdk 36 migration | M | 🟡 | ✅ plan below |
+| 33 | compileSdk/targetSdk migration | M | 🟡 | ✅ `compileSdk`→37 + cohort (#89); `targetSdk`→36 this PR |
+| 44 | **Raise the Kover coverage floor incrementally** — the floor is set at 60% against a current JVM unit coverage of ~71%, leaving an 11-point gap where significant regressions go undetected before CI catches them. After each feature phase, bump the floor to within 5 points of the measured coverage, keeping it a meaningful safety net rather than a formality. | S | 🟢 | |
 
-**Acceptance:** CI enforces a coverage floor; a bot opens dependency-update PRs; build green on bumped versions.
+**Acceptance:** CI enforces a coverage floor; a bot opens dependency-update PRs; build green on bumped versions; Kover floor stays within 5 points of measured coverage after each phase.
 
-### #33 — compileSdk / targetSdk 36 migration plan
+### #33 — compileSdk / targetSdk migration plan
 
-Currently `compileSdk = 35` / `targetSdk = 35` (Android 15). When Android 16 (SDK 36) tooling is stable, migrate as a dedicated PR:
+**Step 1 (this PR): `compileSdk = 37`, `targetSdk` stays 35.** The current AndroidX cohort forced
+the compile target past the originally-planned 36: `core(-ktx) 1.19` and `lifecycle 2.11` require
+`compileSdk 37`, `activity 1.13` / `navigation 2.9.8` require 36. AGP 9.3 (max `compileSdk 37`, min
+Gradle 9.5 → wrapper 9.6.1) plus Kotlin 2.4 and Compose BOM 2026.06 move as one aligned cohort, so the
+partial-bump binary skew (`NoSuchMethodError`) that failed #77/#87 doesn't recur. `compileSdk`-only means
+newer APIs compile without opting into new runtime behavior.
 
-1. **Tooling:** install the SDK 36 platform; confirm the AGP version in use supports `compileSdk = 36` (bump AGP first if needed — let Dependabot surface it).
-2. **Bump `compileSdk = 36`** first, keeping `targetSdk = 35`. Build + run lint: `compileSdk`-only changes surface new deprecations / lint checks without opting into behavior changes. Fix any new errors.
-3. **Bump `targetSdk = 36`** and review the Android 16 behavior changes that apply to this app: predictive-back, edge-to-edge enforcement (already edge-to-edge — verify insets), foreground-service / scheduling changes (we use WorkManager + an `updatePeriodMillis` alarm — verify the widget refresh still behaves), and any notification changes (none used today).
-4. **Test:** full unit + instrumented suite on an API 36 managed device (add a `pixel*api36` GMD alongside the API 30 one, or bump it) and a manual device pass on the widget + deep-link + edit flows.
-5. **Update** the `OldTargetApi` lint note in `app/lint.xml` and this roadmap once shipped.
+**Step 2 (this PR): `targetSdk = 36`.** Required by Play for all app updates from Aug 30, 2026.
+Opts into the Android 16 behavior changes; the audit found only three that touch this app, all
+already satisfied: predictive back (no `onBackPressed`/`KEYCODE_BACK` anywhere — back runs through
+Navigation Compose), edge-to-edge opt-out removal (already edge-to-edge; the dead XML system-bar
+overrides were dropped), and sw≥600dp orientation/aspect-ratio freedom (nothing declared). CI runs
+the instrumented suite on an API 36 GMD alongside the API 30 one, and the Robolectric suite runs at
+SDK 36 (its default follows `targetSdk`). **Remaining before release:** a manual device pass on an
+Android 16 device — back gestures (gesture + 3-button nav), widget → deep-link → back, insets on a
+cutout device in landscape, and the widget refresh/rollover.
 
 ---
 
@@ -146,7 +174,7 @@ the lockscreen key). #35 discloses this in-app.
 ## Sequencing at a glance
 
 ```
-Phase 0  Correctness            → next patch release   (this PR)
+Phase 0  Correctness            → v1.0.1 patch release  (this PR + #38 tag)
 Phase 1  Widget refresh + deep link
 Phase 2  i18n + a11y polish
 Phase 3  Perf + refactor
@@ -156,7 +184,7 @@ Phase 5  UX + privacy           (product backlog)
 
 ## Release mapping
 
-- **patch:** Phase 0 — bug fixes only.
+- **v1.0.1 patch:** Phase 0 — bug fixes only (includes R8 launch-crash fix, write-path JSON guard, WidgetConfigActivity rotation fix).
 - **next minor:** Phases 1–3 — refresh, polish, internal health.
 - **later minor/feature:** Phase 5 — undo, reorder, privacy.
 - **Phase 4** lands continuously, not tied to a single release.
