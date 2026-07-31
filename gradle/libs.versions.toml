@@ -1,14 +1,28 @@
+# Version catalog.
+#
+# A note on the comments here: Dependabot rewrites the VALUES and never the prose around them, so a
+# comment that restates a version number goes stale the moment a bump lands — #94 bumped `agp` while
+# the comment directly above it still read "AGP 9.3.0". Document the things that outlive any single
+# version instead: minimum/maximum bounds, which refs have to move together, and why a floor exists.
+# The current number is always on the next line anyway.
+
 [versions]
-# AGP 9.3.0. Requires Gradle >= 9.5.0 (wrapper pinned to 9.6.1 in gradle/wrapper/gradle-wrapper.properties)
-# and supports up to compileSdk 37 (see app/build.gradle.kts).
+# Android Gradle Plugin. Two constraints to re-check on every bump, because both can break the build
+# in ways the version number alone won't reveal: AGP requires a minimum Gradle (currently >= 9.5.0 —
+# see gradle/wrapper/gradle-wrapper.properties) and caps the maximum usable compileSdk (see
+# app/build.gradle.kts). An AGP bump also ships a new R8, so it can change what gets stripped from
+# the release build; scripts/verify-release-keeps.sh verifies the reflection-only entry points
+# survived, and runs in the release CI job on every such bump.
 agp = "9.3.0"
 
-# Kotlin 2.x. The Compose compiler is now applied via the org.jetbrains.kotlin.plugin.compose
-# Gradle plugin (versioned with Kotlin), replacing the old kotlinCompilerExtensionVersion.
-# Kotlin 2.4.10, Compose BOM 2026.06 and compileSdk 37 are one aligned platform cohort — the Compose
-# compiler tracks Kotlin, and the AndroidX UI/lifecycle libs below require the newer compileSdk. Move
-# them together in a deliberate platform-upgrade PR (this one), never piecemeal: a partial bump is what
-# produced the lifecycle/coroutines binary-skew failures on the earlier routine-bump attempt (#77).
+# Kotlin. The Compose compiler is applied via the org.jetbrains.kotlin.plugin.compose Gradle plugin
+# (versioned with Kotlin), replacing the old kotlinCompilerExtensionVersion.
+#
+# Kotlin, the Compose BOM, AGP and compileSdk form one aligned platform cohort — the Compose compiler
+# tracks Kotlin, and the AndroidX UI/lifecycle libs below gate the compileSdk floor. Move them
+# together in a deliberate platform-upgrade PR (cf. #89), never piecemeal: a partial bump is what
+# produced the compileSdk-floor and coroutines binary-skew failures in #77 and #87. Dependabot's
+# `androidx-platform` group exists to keep this cohort in one PR, separate from routine bumps.
 kotlin = "2.4.10"
 coreKtx = "1.19.0"
 # Splash screen API (Android 12 system splash, backported to API 23+).
