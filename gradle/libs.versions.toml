@@ -11,8 +11,8 @@
 # in ways the version number alone won't reveal: AGP requires a minimum Gradle (currently >= 9.5.0 —
 # see gradle/wrapper/gradle-wrapper.properties) and caps the maximum usable compileSdk (see
 # app/build.gradle.kts). An AGP bump also ships a new R8, so it can change what gets stripped from
-# the release build — scripts/verify-release-keeps.sh guards the reflective entry points that
-# matters for.
+# the release build; scripts/verify-release-keeps.sh verifies the reflection-only entry points
+# survived, and runs in the release CI job on every such bump.
 agp = "9.3.0"
 
 # Kotlin. The Compose compiler is applied via the org.jetbrains.kotlin.plugin.compose Gradle plugin
