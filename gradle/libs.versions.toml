@@ -13,7 +13,7 @@
 # app/build.gradle.kts). An AGP bump also ships a new R8, so it can change what gets stripped from
 # the release build; scripts/verify-release-keeps.sh verifies the reflection-only entry points
 # survived, and runs in the release CI job on every such bump.
-agp = "9.3.1"
+agp = "9.3.2"
 
 # Kotlin. The Compose compiler is applied via the org.jetbrains.kotlin.plugin.compose Gradle plugin
 # (versioned with Kotlin), replacing the old kotlinCompilerExtensionVersion.
@@ -34,10 +34,10 @@ espressoCore = "3.7.0"
 # Declared low; Gradle upgrades to whatever androidx.test.ext:junit pulls transitively.
 androidxTestCore = "1.7.0"
 androidxTestRules = "1.7.0"
-appcompat = "1.7.1"
+appcompat = "1.8.0"
 material = "1.14.0"
 # Compose BOM: pins the Compose library versions. The Compose compiler itself tracks Kotlin (see [plugins]).
-composeBom = "2026.06.01"
+composeBom = "2026.08.00"
 activityCompose = "1.13.0"
 # Must support SDK 36: Robolectric's default test SDK follows the project targetSdk, so the whole
 # JVM suite runs on the SDK 36 android-all jar. 4.16.x is the first line with stable SDK 36 support.
